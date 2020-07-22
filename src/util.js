@@ -1,0 +1,77 @@
+export const uuid = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    let r = (Math.random() * 16) | 0, v = c == 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+
+export const getExtension = (file) => {
+  file && file.name && typeof file.name === 'string' ? file.name.split('.').pop() : 'unknown';
+};
+
+export const isFileTypeSupported = (extension) => [
+  '.png',
+  '.jpeg',
+  '.jpe',
+  '.jpg',
+  '.eps',
+  '.mkv',
+  '.mov',
+  '.ttf',
+  '.otf',
+  '.mp3',
+  '.m4a',
+  '.mp4',
+  '.webm',
+  '.srt',
+  '.wav',
+  '.tif',
+  '.tiff',
+  '.gif',
+  '.psd',
+  '.cr2',
+  '.zip',
+  '.aep',
+  '.aet',
+  '.ai',
+  '.svg',
+  '.pdf',
+  '.sketch',
+  '.csv'
+].includes('.' + extension);
+
+export const getChunkSizeArray = (fileSize, chunkSize) => {
+  const chunkNumber = 6;
+  const val = fileSize / chunkSize;
+  const arr = new Array(chunkNumber).fill(0, 0, chunkNumber);
+  const chunkMultiple = Math.floor(val / chunkNumber);
+  const chunkRemainder = val % chunkNumber;
+
+  return arr.map((val, index) => {
+    let value = val;
+    value = value + (chunkMultiple * chunkSize);
+
+    if (index < chunkRemainder) {
+      value = value + (chunkSize);
+    }
+
+    return value;
+  }).filter(x => x);
+}
+
+export const getChunks = (file, chunkFactor, chunksize) => {
+  const chunksArray = [];
+  const chunkSize = chunksize ? chunksize : Math.ceil(file.size / chunkFactor);
+  let chunkCount = 1;
+  for (let start = 0; start < file.size; start = start + chunkSize) {
+    const end = (start + chunkSize) > file.size ?
+      file.size : start + chunkSize;
+    const chunk = file.slice(start, end)
+    const fileEntry = new File([chunk], chunkCount + file.name, { type: 'text/plain' });
+    fileEntry.file = callback => {
+      callback(fileEntry);
+    };
+    chunksArray.push(fileEntry);
+    chunkCount++;
+  }
+  return chunksArray;
+}
