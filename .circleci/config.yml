@@ -10,32 +10,6 @@ defaults: &defaults
     - image: circleci/node:10.16.0
 
 jobs:
-  test:
-    <<: *defaults
-    steps:
-      - checkout
-
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "package.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
-      - run:
-          name: Installing packages
-          command: yarn install
-      - run:
-          name: Run tests
-          command: npm test
-
-      - save_cache:
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
-
-      - persist_to_workspace:
-          root: ~/resolver
-          paths: .
   deploy:
     <<: *defaults
     steps:
@@ -58,16 +32,10 @@ jobs:
           command: "npm publish ./__release__ --access public"
 
 workflows:
-  test-deploy:
+  deploy:
     jobs:
-      - test:
-          filters:
-            tags:
-              only: /^v.*/
       - deploy:
           context: npm
-          requires:
-            - test
           filters:
             tags:
               only: /^v.*/
