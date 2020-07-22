@@ -5,16 +5,39 @@
 version: 2.1
 
 defaults: &defaults
-  working_directory: ~/resolver
+  working_directory: ~/repo
   docker:
     - image: circleci/node:10.16.0
 
 jobs:
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run:
+          name: Installing packages
+          command: npm install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+
+      - persist_to_workspace:
+          root: ~/repo
+          paths: .
   deploy:
     <<: *defaults
     steps:
       - attach_workspace:
-          at: ~/resolver
+          at: ~/repo
       - run:
           name: Setup release directory
           command: |
@@ -26,16 +49,22 @@ jobs:
             DIR=__release__ node scripts/prepare.js
       - run:
           name: Authenticate with registry
-          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/resolver/.npmrc
+          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
       - run:
           name: Publish package
           command: "npm publish ./__release__ --access public"
 
 workflows:
-  deploy:
+  test-deploy:
     jobs:
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
       - deploy:
           context: npm
+          requires:
+            - test
           filters:
             tags:
               only: /^v.*/

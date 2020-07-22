@@ -8,7 +8,7 @@ export default [{
   input: 'src/index.js',
   output: {
     //Change output library name
-    name: 'resolver',
+    name: 'asset-uploader',
     file: pkg.browser,
     format: 'umd',
     // globals: {

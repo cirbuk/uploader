@@ -11,5 +11,5 @@ npm install @kubric/asset-uploader
 or
 
 ```JavaScript
-yarn add @kubric/asset-resolver
+yarn add @kubric/asset-uploader
 ```
