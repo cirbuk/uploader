@@ -1,4 +1,4 @@
-async function getAllFileEntries(dataTransferItemList) {
+function getAllFileEntries(dataTransferItemList) {
   let fileEntries = [];
   let directoryEntries = [];
 
@@ -8,64 +8,75 @@ async function getAllFileEntries(dataTransferItemList) {
   for (let i = 0; i < dataTransferItemList.length; i++) {
     queue.push(dataTransferItemList[i].webkitGetAsEntry());
   }
+
+  let promises = []
   while (queue.length > 0) {
     let entry = queue.shift();
     if (entry.isFile) {
       fileEntries.push(entry);
     } else if (entry.isDirectory) {
       directoryEntries.push(entry);
-      queue.push(...(await readAllDirectoryEntries(entry.createReader())));
+      promises.push(readAllDirectoryEntries(entry.createReader())
+        .then((dirEntries = []) => queue.push(...dirEntries)));
     }
   }
 
-  let uploadPacket = [];
+  return Promise.all(promises)
+    .then(() => {
+      let uploadPacket = [];
 
-  directoryEntries.map(directory => {
-    const associatedFiles = fileEntries
-      .filter(fileEntry => fileEntry.fullPath === directory.fullPath + '/' + fileEntry.name)
-      .filter(fileEntry => !fileEntry.name.startsWith('.'));
-    let temp = directory.fullPath.split('/').filter(a => a.length > 0);
-    temp.pop();
-    uploadPacket.push({
-      folder: {
-        name: directory.name,
-        fullPath: directory.fullPath,
-        onlyPath: '/' + temp.join('/')
-      },
-      files: associatedFiles
+      directoryEntries.map(directory => {
+        const associatedFiles = fileEntries
+          .filter(fileEntry => fileEntry.fullPath === directory.fullPath + '/' + fileEntry.name)
+          .filter(fileEntry => !fileEntry.name.startsWith('.'));
+        let temp = directory.fullPath.split('/').filter(a => a.length > 0);
+        temp.pop();
+        uploadPacket.push({
+          folder: {
+            name: directory.name,
+            fullPath: directory.fullPath,
+            onlyPath: '/' + temp.join('/')
+          },
+          files: associatedFiles
+        });
+      });
+
+      const rootFiles = fileEntries.filter(fileEntry => fileEntry.fullPath === '/' + fileEntry.name);
+
+      if (rootFiles.length > 0) {
+        uploadPacket.push({
+          folder: {
+            uploadInTargerFolder: true,
+            name: '',
+            fullPath: '/root',
+            onlyPath: ''
+          },
+          files: rootFiles
+        });
+      }
+
+      return uploadPacket;
     });
-  });
-
-  const rootFiles = fileEntries.filter(fileEntry => fileEntry.fullPath === '/' + fileEntry.name);
-
-  if (rootFiles.length > 0) {
-    uploadPacket.push({
-      folder: {
-        uploadInTargerFolder: true,
-        name: '',
-        fullPath: '/root',
-        onlyPath: ''
-      },
-      files: rootFiles
-    });
-  }
-
-  return uploadPacket;
 }
 
-async function readAllDirectoryEntries(directoryReader) {
+function readAllDirectoryEntries(directoryReader) {
   let entries = [];
-  let readEntries = await readEntriesPromise(directoryReader);
-  while (readEntries.length > 0) {
-    entries.push(...readEntries);
-    readEntries = await readEntriesPromise(directoryReader);
-  }
-  return entries;
+  const paginator = () =>
+    readEntriesPromise(directoryReader)
+      .then(readEntries => {
+        if (readEntries.length > 0) {
+          entries.push(...readEntries);
+          return paginator();
+        } else {
+          return entries;
+        }
+      });
+  return paginator();
 }
 
-async function readEntriesPromise(directoryReader) {
+function readEntriesPromise(directoryReader) {
   try {
-    return await new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       directoryReader.readEntries(resolve, reject);
     });
   } catch (err) {
@@ -73,8 +84,7 @@ async function readEntriesPromise(directoryReader) {
   }
 }
 
-export const getUploadPacket = async (items, callback) => {
-  const res = await getAllFileEntries(items);
-  callback(res);
-};
+export const getUploadPacket = (items, callback) =>
+  getAllFileEntries(items)
+    .then(callback);
   

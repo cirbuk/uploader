@@ -49,11 +49,11 @@ export default class FlowManager {
     return Axios.request({
         url: urlObj.signingUrl,
         method: 'post',
-        data: {
+        data: whiteListedFileEntries.map(file => ({
           path: targetFolder.id,
-          files: whiteListedFileEntries.map(file => file.name),
-          async: 0,
-        }
+          filename: file.name,
+          type: "image"
+        }))
       })
       .then(response => {
         response.data.map((uploadUrlData, index) => {
@@ -64,6 +64,7 @@ export default class FlowManager {
             window.parent.postMessage({ type: "PROGRESSED", message: 1 }, "*");
             const extension = getExtension(file);
             if (uploadUrlData && uploadUrlData.url) {
+              const extn = file.name.split(".").pop();
               return Axios.request({
                   method: 'post',
                   url: uploadUrlData.url,
@@ -91,8 +92,18 @@ export default class FlowManager {
                       url: urlObj.confirmUpload,
                       data: uploadUrlData
                     })
-                    .then(data => {
-                      eventHandler({ type: "FILE_CONFIRM_UPLOAD_SUCCESS", payload: { data, oldId: tempTaskId } });
+                    .then(response => {
+                      eventHandler({
+                        type: "FILE_CONFIRM_UPLOAD_SUCCESS",
+                        payload: {
+                          data: {
+                            ...response.data,
+                            filename: file.name,
+                            url: `https://media.kubric.io/api/assetlib/${response.data.id}.${extn}`
+                          },
+                          oldId: tempTaskId
+                        }
+                      });
                     })
                     .catch(exception => {
                       eventHandler({

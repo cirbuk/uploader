@@ -3,6 +3,7 @@ import commonjs from 'rollup-plugin-commonjs';
 import pkg from './package.json';
 import { terser } from "rollup-plugin-terser";
 import babel from "rollup-plugin-babel";
+import sourcemaps from 'rollup-plugin-sourcemaps';
 
 export default [{
   input: 'src/index.js',
@@ -11,12 +12,10 @@ export default [{
     name: 'asset-uploader',
     file: pkg.browser,
     format: 'umd',
-    // globals: {
-    //   "axios": "axios"
-    // }
+    sourcemap: true
   },
-  // external: ["axios"],
   plugins: [
+    sourcemaps(),
     resolve({
       browser: true,
       preferBuiltins: false
@@ -24,6 +23,9 @@ export default [{
     babel({
       babelrc: false,
       exclude: "node_modules/**",
+      presets: [
+        require("@babel/preset-env")
+      ],
       plugins: [
         require("@babel/plugin-proposal-class-properties"),
         require("@babel/plugin-proposal-function-bind"),
@@ -32,7 +34,7 @@ export default [{
       extensions: ['.js', '.ts']
     }),
     commonjs(), // so Rollup can convert external deps to ES6
-    terser()
+    // terser()
   ]
 }, {
   input: 'src/index.js',

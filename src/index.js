@@ -4,7 +4,7 @@ import FlowManager from './flowmanager';
 const promiseSerial = funcs =>
   funcs.reduce((promise, func) => promise.then(result => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
 
-const onNewUploadPacket = (targetFolderId, dispatch, urlObj, uploadPacket) =>
+const onNewUploadPacket = (uploadPacket, targetFolderId, dispatch, urlObj) =>
   promiseSerial(
     uploadPacket.map(pack => () => {
       const { folder } = pack;
@@ -26,9 +26,8 @@ const onNewUploadPacket = (targetFolderId, dispatch, urlObj, uploadPacket) =>
       });
     }));
 
-export const upload = (event, targetFolderId, dispatch, urlObj) => {
-  if (event && event.type === 'drop') {
-    const dataTransfer = event.dataTransfer;
+export const upload = ({ targetFolderId, callback: dispatch, urls: urlObj, dataTransfer, files } = {}) => {
+  if (dataTransfer) {
     if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
       const files = [];
       const fileEntry = dataTransfer.files[0];
@@ -49,15 +48,15 @@ export const upload = (event, targetFolderId, dispatch, urlObj) => {
     } else {
       getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj));
     }
-  } else if (event && event.type === 'change') {
-    const files = [];
+  } else if (files.length > 0) {
+    const fileEntries = [];
     //? Convert FileList into FileEntries
-    for (let i = 0; i < event.target.files.length; i++) {
-      const fileEntry = event.target.files[i];
+    for (let i = 0; i < files.length; i++) {
+      const fileEntry = files[i];
       fileEntry.file = callback => {
         callback(fileEntry);
       };
-      files.push(fileEntry);
+      fileEntries.push(fileEntry);
     }
     const packet = [{
       folder: {
@@ -66,7 +65,7 @@ export const upload = (event, targetFolderId, dispatch, urlObj) => {
         fullPath: '/root',
         onlyPath: ''
       },
-      files
+      files: fileEntries
     }];
     onNewUploadPacket(packet, targetFolderId, dispatch, urlObj);
   }
