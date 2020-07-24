@@ -1,8 +1,7 @@
 import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
-import { get, isValidString } from "@kubric/litedash";
+import { isValidString, isUndefined } from "@kubric/litedash";
 import { promiseSerial } from "./util";
-import { isUndefined } from "../../litedash";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
@@ -51,8 +50,6 @@ const parseInput = obj => {
 }
 
 export class Uploader {
-  static initialized = false;
-
   static init({
                 chunking = {
                   enabled: false,
@@ -146,6 +143,8 @@ export class Uploader {
     }
   }
 }
+
+Uploader.initialized = false;
 
 // const onNewUploadPacket = (targetFolderId, dispatch, urlObj, handlers, chunkingConfig, uploadPacket) =>
 //   promiseSerial(

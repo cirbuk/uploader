@@ -10,10 +10,6 @@ import Axios from 'axios';
 import { messages, events } from './constants';
 
 export default class FlowManager extends EventEmitter {
-  static chunkingConfig = {};
-  static apiUrls = {};
-  static folderIdForPathCache = [];
-
   static init({ chunking, urls }) {
     FlowManager.chunkingConfig = chunking;
     FlowManager.apiUrls = urls;
@@ -211,3 +207,7 @@ export default class FlowManager extends EventEmitter {
       });
   };
 }
+
+FlowManager.chunkingConfig = {};
+FlowManager.apiUrls = {};
+FlowManager.folderIdForPathCache = [];

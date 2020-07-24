@@ -12,8 +12,12 @@ export default [{
     name: 'asset-uploader',
     file: pkg.browser,
     format: 'umd',
-    sourcemap: true
+    sourcemap: true,
+    global: {
+      "@kubric/litedash": "litedash"
+    }
   },
+  external: ["@kubric/litedash"],
   plugins: [
     sourcemaps(),
     resolve({
@@ -45,5 +49,5 @@ export default [{
     file: pkg.module,
     format: 'es'
   }],
-  external: ["axios"]
+  external: ["axios", "@kubric/litedash"]
 }];
