@@ -1,8 +1,13 @@
-import { uuid, getExtension, isFileTypeSupported } from './util.js';
+import { uuid, getExtension, isFileTypeSupported, EventEmitter } from './util.js';
 import Axios from 'axios';
 import errorMessages from './messages';
 
-export default class FlowManager {
+export default class FlowManager extends EventEmitter {
+
+  static init() {
+
+  };
+
   static createFolderFlowForPacket(pack, targetFolderId, folderCreationUrl, handlers, eventHandler) {
     const { folder } = pack;
     return Axios.request({

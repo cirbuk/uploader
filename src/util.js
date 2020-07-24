@@ -75,3 +75,23 @@ export const getChunks = (file, chunkFactor, chunksize) => {
   }
   return chunksArray;
 }
+
+export const promiseSerial = funcs => funcs.reduce((promise, func) => promise.then(result => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
+
+export class EventEmitter {
+  constructor() {
+    this.handlers = {};
+  }
+
+  on(event, handler) {
+    const registered = this.handlers[event] || [];
+    const alreadyRegistered = registered.every(h => h !== handler);
+    !alreadyRegistered && registered.push(handler);
+    return () => registered.filter(h => h !== handler);
+  }
+
+  emit(event, data) {
+    const registered = this.handlers[event] || [];
+    registered.forEach(handler => handler(data));
+  }
+}
