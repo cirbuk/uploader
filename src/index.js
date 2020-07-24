@@ -51,8 +51,6 @@ const parseInput = obj => {
 }
 
 export class Uploader {
-  static chunkingConfig;
-  static apiUrl;
   static initialized = false;
 
   static init({
@@ -62,8 +60,7 @@ export class Uploader {
                   max: MAX_CHUNKSIZE
                 }, urls: { getUploadUrl, createFolder } = {}
               }) {
-    Uploader.chunkingConfig = chunking;
-    if (!isValidString(getUploadUrls)) {
+    if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrls" is a mandatory config option.`);
     } else if (!isValidString(createFolder)) {
       throw new Error(`"urls.createFolder" is a mandatory config option.`);
@@ -93,7 +90,7 @@ export class Uploader {
       uploadPacket.map(pack => () => {
         const { folder } = pack;
         return new Promise(resolve => {
-          if (folder.uploadInTargerFolder) {
+          if (folder.uploadInTargetFolder) {
             //? If no folder needs to be created, skip createFolderFlow
             resolve({
               id: targetFolderId
@@ -117,6 +114,9 @@ export class Uploader {
   // 2. event.dataTransfer object where event is drop event object
   // 3. event.files object where event is the file changed event object in an HTML file input
   upload(obj) {
+    if (!Uploader.initialized) {
+      throw new Error("Uploader not initialized");
+    }
     const results = parseInput(obj);
     if (results) {
       const { type, files = [] } = results;
@@ -134,124 +134,82 @@ export class Uploader {
         }
         const packet = [{
           folder: {
-            uploadInTargerFolder: true,
+            uploadInTargetFolder: true,
             name: '',
             fullPath: '/root',
             onlyPath: ''
           },
           files: fileEntries
         }];
-        onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
+        this.onNewUploadPacket(packet);
       }
-    }
-    if (!isUndefined(obj.items)) {
-      if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
-        const files = [];
-        const fileEntry = dataTransfer.files[0];
-        fileEntry.file = callback => {
-          callback(fileEntry);
-        };
-        files.push(fileEntry);
-        const packet = [{
-          folder: {
-            uploadInTargerFolder: true,
-            name: '',
-            fullPath: '/root',
-            onlyPath: ''
-          },
-          files
-        }];
-        onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
-      } else {
-        getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj, handlers, chunkingConfig));
-      }
-    } else if (files.length > 0) {
-      const fileEntries = [];
-      //? Convert FileList into FileEntries
-      for (let i = 0; i < files.length; i++) {
-        const fileEntry = files[i];
-        fileEntry.file = callback => {
-          callback(fileEntry);
-        };
-        fileEntries.push(fileEntry);
-      }
-      const packet = [{
-        folder: {
-          uploadInTargerFolder: true,
-          name: '',
-          fullPath: '/root',
-          onlyPath: ''
-        },
-        files: fileEntries
-      }];
-      onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
     }
   }
-};
+}
 
-const onNewUploadPacket = (targetFolderId, dispatch, urlObj, handlers, chunkingConfig, uploadPacket) =>
-  promiseSerial(
-    uploadPacket.map(pack => () => {
-      const { folder } = pack;
-      return new Promise(resolve => {
-        if (folder.uploadInTargerFolder) {
-          //? If no folder needs to be created, skip createFolderFlow
-          resolve({ id: targetFolderId });
-          return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj, handlers, chunkingConfig);
-        }
-        const folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] ?
-          FlowManager.folderIdForPathCache[folder.onlyPath] : targetFolderId;
-
-        UploadFlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, urlObj.folderCreationUrl, handlers, ({ type, payload }) => {
-          if (type === "FOLDER_CREATED") {
-            resolve(payload.folderCreated);
-          }
-          dispatch({ type, payload });
-        });
-      });
-    }));
-
-export const upload = ({ dataTransfer, files, targetFolderId, dispatch, urlObj, handlers, chunkingConfig }) => {
-  if (dataTransfer) {
-    if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
-      const files = [];
-      const fileEntry = dataTransfer.files[0];
-      fileEntry.file = callback => {
-        callback(fileEntry);
-      };
-      files.push(fileEntry);
-      const packet = [{
-        folder: {
-          uploadInTargerFolder: true,
-          name: '',
-          fullPath: '/root',
-          onlyPath: ''
-        },
-        files
-      }];
-      onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
-    } else {
-      getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj, handlers, chunkingConfig));
-    }
-  } else if (files.length > 0) {
-    const fileEntries = [];
-    //? Convert FileList into FileEntries
-    for (let i = 0; i < files.length; i++) {
-      const fileEntry = files[i];
-      fileEntry.file = callback => {
-        callback(fileEntry);
-      };
-      fileEntries.push(fileEntry);
-    }
-    const packet = [{
-      folder: {
-        uploadInTargerFolder: true,
-        name: '',
-        fullPath: '/root',
-        onlyPath: ''
-      },
-      files: fileEntries
-    }];
-    onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
-  }
-};
+// const onNewUploadPacket = (targetFolderId, dispatch, urlObj, handlers, chunkingConfig, uploadPacket) =>
+//   promiseSerial(
+//     uploadPacket.map(pack => () => {
+//       const { folder } = pack;
+//       return new Promise(resolve => {
+//         if (folder.uploadInTargetFolder) {
+//           //? If no folder needs to be created, skip createFolderFlow
+//           resolve({ id: targetFolderId });
+//           return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj, handlers, chunkingConfig);
+//         }
+//         const folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] ?
+//           FlowManager.folderIdForPathCache[folder.onlyPath] : targetFolderId;
+//
+//         UploadFlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, urlObj.folderCreationUrl, handlers, ({ type, payload }) => {
+//           if (type === "FOLDER_CREATED") {
+//             resolve(payload.folderCreated);
+//           }
+//           dispatch({ type, payload });
+//         });
+//       });
+//     }));
+//
+// export const upload = ({ dataTransfer, files, targetFolderId, dispatch, urlObj, handlers, chunkingConfig }) => {
+//   if (dataTransfer) {
+//     if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
+//       const files = [];
+//       const fileEntry = dataTransfer.files[0];
+//       fileEntry.file = callback => {
+//         callback(fileEntry);
+//       };
+//       files.push(fileEntry);
+//       const packet = [{
+//         folder: {
+//           uploadInTargetFolder: true,
+//           name: '',
+//           fullPath: '/root',
+//           onlyPath: ''
+//         },
+//         files
+//       }];
+//       onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
+//     } else {
+//       getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj, handlers, chunkingConfig));
+//     }
+//   } else if (files.length > 0) {
+//     const fileEntries = [];
+//     //? Convert FileList into FileEntries
+//     for (let i = 0; i < files.length; i++) {
+//       const fileEntry = files[i];
+//       fileEntry.file = callback => {
+//         callback(fileEntry);
+//       };
+//       fileEntries.push(fileEntry);
+//     }
+//     const packet = [{
+//       folder: {
+//         uploadInTargetFolder: true,
+//         name: '',
+//         fullPath: '/root',
+//         onlyPath: ''
+//       },
+//       files: fileEntries
+//     }];
+//     onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
+//   }
+// };

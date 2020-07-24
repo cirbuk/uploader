@@ -95,3 +95,19 @@ export class EventEmitter {
     registered.forEach(handler => handler(data));
   }
 }
+
+export const initiateChunkUpload = (chunkTempIds, tempIds, name, id, chunkCount, eventHandler) => {
+  chunkTempIds.push(uuid());
+  eventHandler({
+    type: "CHUNK_UPLOAD_INITIATED",
+    payload: {
+      taskId: tempIds[0],
+      name,
+      meta: {
+        folder: id
+      },
+      chunkTaskId: chunkTempIds[chunkCount]
+    }
+  });
+  return chunkTempIds;
+}

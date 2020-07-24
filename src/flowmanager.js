@@ -1,14 +1,32 @@
-import { uuid, getExtension, isFileTypeSupported, EventEmitter } from './util.js';
+import {
+  uuid,
+  getExtension,
+  isFileTypeSupported,
+  EventEmitter,
+  getChunkSizeArray,
+  initiateChunkUpload
+} from './util.js';
 import Axios from 'axios';
-import errorMessages from './messages';
+import { messages, events } from './constants';
 
 export default class FlowManager extends EventEmitter {
+  static chunkingConfig = {};
+  static apiUrls = {};
+  static folderIdForPathCache = [];
 
-  static init() {
-
+  static init({ chunking, urls }) {
+    FlowManager.chunkingConfig = chunking;
+    FlowManager.apiUrls = urls;
   };
 
-  static createFolderFlowForPacket(pack, targetFolderId, folderCreationUrl, handlers, eventHandler) {
+  constructor(targetFolderId) {
+    super();
+    this.targetFolderId = targetFolderId;
+  }
+
+  createFolderFlowForPacket(pack) {
+    const { targetFolderId } = this;
+    const folderCreationUrl = FlowManager.apiUrls.createFolder;
     const { folder } = pack;
     return Axios.request({
         url: folderCreationUrl,
@@ -21,31 +39,34 @@ export default class FlowManager extends EventEmitter {
         }
       })
       .then(createdFolder => {
-        UploadFlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
-        eventHandler({
-          type: 'FOLDER_CREATED',
-          payload: {
-            createdFolder: { ...createdFolder, created_time: new Date() },
-            parentFolderId: targetFolderId,
-            appendAt: 'start'
-          }
+        FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
+        this.emit(events.FOLDER_CREATED, {
+          createdFolder: { ...createdFolder, created_time: new Date() },
+          parentFolderId: targetFolderId,
+          appendAt: 'start'
         });
         if (pack.files.length > 0) {
-          return FlowManager.uploadFilesFlow(createdFolder, pack.files, eventHandler, urlObj, handlers);
+          return this.uploadFilesFlow(createdFolder, pack.files);
         }
       })
-      .catch(exception => {
-        eventHandler({ type: "FOLDER_CREATE_FAILED", payload: { exception, for: { targetFolderId, pack } } });
+      .catch(error => {
+        this.emit(events.FOLDER_CREATE_FAILED, {
+          error,
+          for: {
+            targetFolderId,
+            pack
+          }
+        });
       });
   };
 
-  static uploadFilesFlow(targetFolder, files, eventHandler, urlObj, handlers, chunkingConfig) {
+  uploadFilesFlow(targetFolder, files) {
     const whiteListedFileEntries = files.filter(file => !file.name.startsWith('.'));
     const tempIds = whiteListedFileEntries.map(() => uuid());
     let chunkTempIds = [];
     let chunksToBeUploaded = [];
     let chunkCount = 0;
-    const { minSize, maxSize, enableChunking } = chunkingConfig;
+    const { minSize, maxSize, enableChunking } = FlowManager.chunkingConfig;
 
     if (enableChunking && files.length === 1 && files[0].size >= minSize && files[0].size <= maxSize) {
       const file = files[0];
@@ -53,14 +74,13 @@ export default class FlowManager extends EventEmitter {
       const chunkArr = getChunkSizeArray(file.size, chunkSize);
       let start = 0;
       chunksToBeUploaded = chunkArr.map((val, index) => {
-        const end = (start + val) > file.size ?
-          file.size : start + val;
+        const end = ((start + val) > file.size) ? file.size : (start + val);
         const chunk = file.slice(start, end)
         const fileEntry = new File([chunk], index + file.name, { type: 'text/plain' });
         fileEntry.file = callback => {
           callback(fileEntry);
         };
-        initiateChunkUpload(chunkTempIds, tempIds, file.name, targetFolder.id, index, eventHandler)
+        initiateChunkUpload(chunkTempIds, tempIds, file.name, targetFolder.id, index);
         start = end;
         return fileEntry;
       })
@@ -68,29 +88,23 @@ export default class FlowManager extends EventEmitter {
       chunkCount = chunksToBeUploaded.length;
     } else {
       whiteListedFileEntries.map((file, index) => {
-        eventHandler({
-          type: 'FILE_UPLOAD_INITIATED',
-          payload: {
-            name: file.name,
-            meta: {
-              folder: targetFolder.id
-            },
-            taskId: tempIds[index]
-          }
+        this.emit(events.FILE_UPLOAD_INITIATED, {
+          name: file.name,
+          meta: {
+            folder: targetFolder.id
+          },
+          taskId: tempIds[index]
         });
       });
     }
     const detailsObj = {}
-    if (targetFolder.id.test('/')) {
-      detailsObj['path'] = folder.id;
-    } else detailsObj['folder_id'] = folder.id;
-
+    detailsObj[/\//.test(targetFolder.id) ? 'path' : "folder_id"] = targetFolder.id;
     if (chunkCount > 1) {
       detailsObj['parallel_chunks'] = chunkCount;
     }
-
+    const { getUploadUrl } = FlowManager.apiUrls;
     return Axios.request({
-        url: urlObj.signingUrl,
+        url: getUploadUrl,
         method: 'post',
         data: {
           details: whiteListedFileEntries.map(file => {
@@ -104,67 +118,64 @@ export default class FlowManager extends EventEmitter {
       .then(response => {
         if (chunkCount > 1) {
           const { urls, ...uploadUrlData } = response.data[0];
-          Object.keys(urls).map((key, index) => {
-            const url = urls[key];
-            const file = chunksToBeUploaded[index];
-            const tempTaskId = chunkTempIds[index];
-            eventHandler({
-              type: "CHUNK_UPLOAD_PROGRESS",
-              payload: { progress: 1, chunkTaskId: tempTaskId, taskId: tempIds[0] }
-            });
-            const extension = getExtension(file);
-
-            if (url) {
-              return Axios.request({
-                  method: 'post',
-                  url,
-                  data: file,
-                  onUploadProgress: (progressData) => {
-                    const { loaded, total } = progressData;
-                    const percent = Math.round((loaded / total) * 100)
-                    eventHandler({
-                      type: "CHUNK_UPLOAD_PROGRESS",
-                      payload: { progress: percent, taskId: tempIds[0], chunkTaskId: tempTaskId }
-                    });
-                    handlers.onProgress(progressData, uploadUrlData);
-                    if (percent === 100) {
-                      handlers.onCompleted(uploadUrlData);
+          Object.keys(urls)
+            .map((key, index) => {
+              const url = urls[key];
+              const file = chunksToBeUploaded[index];
+              const tempTaskId = chunkTempIds[index];
+              this.emit(events.CHUNK_UPLOAD_PROGRESS, {
+                progress: 1,
+                chunkTaskId: tempTaskId,
+                taskId: tempIds[0]
+              })
+              const extension = getExtension(file);
+              if (url && isFileTypeSupported(extension)) {
+                return Axios.request({
+                    method: 'post',
+                    url,
+                    data: file,
+                    onUploadProgress: (progressData) => {
+                      const { loaded, total } = progressData;
+                      const percent = Math.round((loaded / total) * 100);
+                      this.emit(events.CHUNK_UPLOAD_PROGRESS, {
+                        progress: percent,
+                        taskId: tempIds[0],
+                        chunkTaskId: tempTaskId
+                      });
                     }
-                  }
-                })
-                .then(e => {
-                })
-                .catch(exception => {
-                  eventHandler({
-                    type: "CHUNK_UPLOAD_FAILED",
-                    payload: {
-                      message: errorMessages.FILE_UPLOAD_FAILED,
+                  })
+                  .then(e => {
+                    this.emit(events.CHUNK_UPLOAD_COMPLETED, {
+                      taskId: tempIds[0],
+                      chunkTaskId: tempTaskId
+                    });
+                  })
+                  .catch(exception => {
+                    this.emit(events.CHUNK_UPLOAD_FAILED, {
+                      message: messages.FILE_UPLOAD_FAILED,
                       exception,
                       taskId: tempIds[0],
                       chunkTaskId: tempTaskId
-                    }
+                    });
                   });
+              } else {
+                this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
+                  message: messages.GET_FILE_UPLOAD_URL_FAILED,
+                  taskId: tempIds[0]
                 });
-            } else if (!isFileTypeSupported(extension)) {
-              eventHandler({
-                type: "GET_FILE_UPLOAD_URL_FAILED",
-                payload: { message: errorMessages.EXTENSION_NOT_SUPPORTED, taskId: tempIds[0] }
-              });
-            } else {
-              eventHandler({
-                type: "GET_FILE_UPLOAD_URL_FAILED",
-                payload: { message: errorMessages.GET_FILE_UPLOAD_URL_FAILED, taskId: tempIds[0] }
-              });
-            }
-          });
+              }
+            });
         } else {
           response.data.map((uploadUrlData, index) => {
             const fileEntry = whiteListedFileEntries[index];
             fileEntry.file(file => {
               const tempTaskId = tempIds[index];
-              eventHandler({ type: "FILE_UPLOAD_PROGRESS", payload: { progress: 1, taskId: tempTaskId } });
+              this.emit(events.FILE_UPLOAD_PROGRESS, {
+                progress: 1,
+                taskId: tempTaskId
+              });
               const extension = getExtension(file);
-              if (uploadUrlData && uploadUrlData.url) {
+              if (uploadUrlData && uploadUrlData.url && isFileTypeSupported(extension)) {
                 const extn = file.name.split(".").pop();
                 return Axios.request({
                     method: 'post',
@@ -173,31 +184,25 @@ export default class FlowManager extends EventEmitter {
                     onUploadProgress: (progressData) => {
                       const { loaded, total } = progressData;
                       const percent = Math.round((loaded / total) * 100)
-                      eventHandler({
-                        type: "FILE_UPLOAD_PROGRESS",
-                        payload: { progress: percent, taskId: tempTaskId }
+                      this.emit(events.FILE_UPLOAD_PROGRESS, {
+                        progress: percent,
+                        taskId: tempTaskId,
+                        uploadUrlData
                       });
-                      handlers.onProgress(progressData, uploadUrlData);
-                      if (percent === 100) {
-                        handlers.onCompleted(uploadUrlData);
-                      }
                     }
                   })
-                  .catch(exception => {
-                    eventHandler({
-                      type: "FILE_UPLOAD_FAILED",
-                      payload: { message: errorMessages.FILE_UPLOAD_FAILED, exception, taskId: tempTaskId }
+                  .then(() => {
+                    this.emit(events.FILE_UPLOAD_COMPLETED, uploadUrlData);
+                  })
+                  .catch(error => {
+                    this.emit(events.FILE_UPLOAD_FAILED, {
+                      error,
+                      taskId: tempTaskId
                     });
                   });
-              } else if (!isFileTypeSupported(extension)) {
-                eventHandler({
-                  type: "GET_FILE_UPLOAD_URL_FAILED",
-                  payload: { message: errorMessages.EXTENSION_NOT_SUPPORTED, taskId: tempTaskId }
-                });
               } else {
-                eventHandler({
-                  type: "GET_FILE_UPLOAD_URL_FAILED",
-                  payload: { message: errorMessages.GET_FILE_UPLOAD_URL_FAILED, taskId: tempTaskId }
+                this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
+                  taskId: tempTaskId
                 });
               }
             });
@@ -206,5 +211,3 @@ export default class FlowManager extends EventEmitter {
       });
   };
 }
-
-FlowManager.folderIdForPathCache = [];
