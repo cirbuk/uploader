@@ -4,7 +4,7 @@ import FlowManager from './flowmanager';
 const promiseSerial = funcs =>
   funcs.reduce((promise, func) => promise.then(result => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
 
-const onNewUploadPacket = (uploadPacket, targetFolderId, dispatch, urlObj) =>
+const onNewUploadPacket = (targetFolderId, dispatch, urlObj, handlers, chunkingConfig, uploadPacket) =>
   promiseSerial(
     uploadPacket.map(pack => () => {
       const { folder } = pack;
@@ -12,22 +12,23 @@ const onNewUploadPacket = (uploadPacket, targetFolderId, dispatch, urlObj) =>
         if (folder.uploadInTargerFolder) {
           //? If no folder needs to be created, skip createFolderFlow
           resolve({ id: targetFolderId });
-          return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj);
+          return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj, handlers, chunkingConfig);
         }
         const folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] ?
           FlowManager.folderIdForPathCache[folder.onlyPath] : targetFolderId;
 
-        // UploadFlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, ({ type, payload }) => {
-        //   if (type === types.FOLDER_CREATED) {
-        //     resolve(payload.folderCreated);
-        //   }
-        //   dispatch({ type, payload });
-        // });
+        UploadFlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, urlObj.folderCreationUrl, handlers, ({ type, payload }) => {
+          if (type === "FOLDER_CREATED") {
+            resolve(payload.folderCreated);
+          }
+          dispatch({ type, payload });
+        });
       });
     }));
 
-export const upload = ({ targetFolderId, callback: dispatch, urls: urlObj, dataTransfer, files } = {}) => {
-  if (dataTransfer) {
+export const upload = (event, targetFolderId, dispatch, urlObj, handlers, chunkingConfig) => {
+  if (event && event.type === 'drop') {
+    const dataTransfer = event.dataTransfer;
     if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
       const files = [];
       const fileEntry = dataTransfer.files[0];
@@ -44,9 +45,9 @@ export const upload = ({ targetFolderId, callback: dispatch, urls: urlObj, dataT
         },
         files
       }];
-      onNewUploadPacket(packet, targetFolderId, dispatch, urlObj);
+      onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
     } else {
-      getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj));
+      getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj, handlers, chunkingConfig));
     }
   } else if (files.length > 0) {
     const fileEntries = [];
@@ -67,6 +68,6 @@ export const upload = ({ targetFolderId, callback: dispatch, urls: urlObj, dataT
       },
       files: fileEntries
     }];
-    onNewUploadPacket(packet, targetFolderId, dispatch, urlObj);
+    onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
   }
 };
