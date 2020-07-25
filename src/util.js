@@ -104,18 +104,16 @@ export class EventEmitter {
   }
 }
 
-export const initiateChunkUpload = (chunkTempIds, tempIds, name, id, chunkCount, eventHandler) => {
+export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount) {
   chunkTempIds.push(uuid());
-  eventHandler({
-    type: "CHUNK_UPLOAD_INITIATED",
-    payload: {
+  this.emit(
+    "CHUNK_UPLOAD_INITIATED",{
       taskId: tempIds[0],
       name,
       meta: {
         folder: id
       },
       chunkTaskId: chunkTempIds[chunkCount]
-    }
   });
   return chunkTempIds;
 }

@@ -69,7 +69,7 @@ export default class FlowManager extends EventEmitter {
     let chunkTempIds = [];
     let chunksToBeUploaded = [];
     let chunkCount = 0;
-    const { minSize, maxSize, enableChunking } = FlowManager.chunkingConfig;
+    const { min:minSize, max:maxSize, enableChunking } = FlowManager.chunkingConfig;
 
     if (enableChunking && files.length === 1 && files[0].size >= minSize && files[0].size <= maxSize) {
       const file = files[0];
@@ -83,7 +83,7 @@ export default class FlowManager extends EventEmitter {
         fileEntry.file = callback => {
           callback(fileEntry);
         };
-        initiateChunkUpload(chunkTempIds, tempIds, file.name, targetFolder.id, index);
+        initiateChunkUpload.call(this, chunkTempIds, tempIds, file.name, targetFolder.id, index);
         start = end;
         return fileEntry;
       })
@@ -109,14 +109,12 @@ export default class FlowManager extends EventEmitter {
     return Axios.request({
         url: getUploadUrl,
         method: 'post',
-        data: {
-          details: whiteListedFileEntries.map(file => {
+        data: whiteListedFileEntries.map(file => {
             return {
               filename: file.name,
               ...detailsObj
             }
           })
-        }
       })
       .then(response => {
         if (chunkCount > 1) {

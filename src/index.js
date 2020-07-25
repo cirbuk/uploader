@@ -10,10 +10,10 @@ const MAX_CHUNKSIZE = 104857600;
 export const events = uploaderEvents;
 
 const validateDataTransfer = (obj = {}) => {
-  if (Array.isArray(obj.items)) {
+  if (obj.items instanceof DataTransferItemList) {
     if (obj.items[0].webkitGetAsEntry().isFile && obj.items.length === 1) {
       return {
-        type: "dropped",
+        type: "droppedFile",
         files: [obj.files[0]]
       };
     } else {
@@ -53,17 +53,22 @@ const parseInput = obj => {
 
 export class Uploader {
   static init({
-                chunking = {
-                  enabled: false,
-                  min: MIN_CHUNKSIZE,
-                  max: MAX_CHUNKSIZE
-                }, urls: { getUploadUrl, createFolder } = {}
+                chunking: {
+                    enableChunking = false,
+                    min = MIN_CHUNKSIZE,
+                    max = MAX_CHUNKSIZE
+                  },
+                 urls: { getUploadUrl, createFolder } = {}
               }) {
     if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrls" is a mandatory config option.`);
     }
     FlowManager.init({
-      chunking,
+      chunking : {
+          enableChunking,
+          min,
+          max
+      },
       urls: {
         getUploadUrl,
         createFolder
