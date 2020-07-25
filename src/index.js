@@ -20,7 +20,6 @@ const validateDataTransfer = (obj = {}) => {
       }
     }
   }
-  return false;
 };
 
 const parseInput = obj => {
@@ -33,11 +32,11 @@ const parseInput = obj => {
   } else if (obj.dataTransfer) {
     //Checking if it is an event object passed directly from the drop event
     return validateDataTransfer(obj.dataTransfer);
-  } else if (obj.files && obj.files.length > 0) {
+  } else if (obj.target && obj.target.files && obj.target.files.length > 0) {
     //Checking if it is an event object passed from the input element
     return {
       type: "selected",
-      files: obj.files
+      files: obj.target.files
     };
   } else if (obj.length > 0) {
     //Checking if it is file list extracted from the event and passed
@@ -92,15 +91,14 @@ export class Uploader {
             resolve({
               id: targetFolderId
             });
-            return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj, handlers, chunkingConfig);
+            return this.manager.uploadFilesFlow({ id: targetFolderId }, pack.files);
           }
           let folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] || targetFolderId;
 
-          FlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, urlObj.folderCreationUrl, handlers, ({ type, payload }) => {
-            if (type === "FOLDER_CREATED") {
-              resolve(payload.folderCreated);
+          this.manager.createFolderFlowForPacket(pack, folderIdForNewFolder,  (err, eventData) => {
+            if (eventData) {
+              resolve(eventData.folderCreated);
             }
-            dispatch({ type, payload });
           });
         });
       }));

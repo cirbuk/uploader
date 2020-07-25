@@ -4,9 +4,8 @@ export const uuid = () =>
     return v.toString(16);
   });
 
-export const getExtension = (file) => {
-  file && file.name && typeof file.name === 'string' ? file.name.split('.').pop() : 'unknown';
-};
+export const getExtension = (file) => 
+  (file && file.name && typeof file.name === 'string') ? file.name.split('.').pop() : 'unknown';
 
 export const isFileTypeSupported = (extension) => [
   '.png',
@@ -85,8 +84,9 @@ export class EventEmitter {
 
   on(event, handler) {
     const registered = this.handlers[event] || [];
-    const alreadyRegistered = registered.every(h => h !== handler);
+    const alreadyRegistered = registered.length > 0 && registered.every(h => h !== handler);
     !alreadyRegistered && registered.push(handler);
+    this.handlers[event] = registered;
     return () => registered.filter(h => h !== handler);
   }
 

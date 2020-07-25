@@ -20,8 +20,7 @@ export default class FlowManager extends EventEmitter {
     this.targetFolderId = targetFolderId;
   }
 
-  createFolderFlowForPacket(pack) {
-    const { targetFolderId } = this;
+  createFolderFlowForPacket(pack, targetFolderId, callback) {
     const folderCreationUrl = FlowManager.apiUrls.createFolder;
     const { folder } = pack;
     return Axios.request({
@@ -35,24 +34,28 @@ export default class FlowManager extends EventEmitter {
         }
       })
       .then(createdFolder => {
-        FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
-        this.emit(events.FOLDER_CREATED, {
+        const eventData = {
           createdFolder: { ...createdFolder, created_time: new Date() },
           parentFolderId: targetFolderId,
           appendAt: 'start'
-        });
+        };
+        callback(null,eventData);
+        FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
+        this.emit(events.FOLDER_CREATED, eventData);
         if (pack.files.length > 0) {
           return this.uploadFilesFlow(createdFolder, pack.files);
         }
       })
       .catch(error => {
-        this.emit(events.FOLDER_CREATE_FAILED, {
+        const eventData = {
           error,
           for: {
             targetFolderId,
             pack
           }
-        });
+        }
+        callback(eventData);
+        this.emit(events.FOLDER_CREATE_FAILED, eventData);
       });
   };
 
