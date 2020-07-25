@@ -4,7 +4,7 @@ export const uuid = () =>
     return v.toString(16);
   });
 
-export const getExtension = (file) => 
+export const getExtension = (file) =>
   (file && file.name && typeof file.name === 'string') ? file.name.split('.').pop() : 'unknown';
 
 export const isFileTypeSupported = (extension) => [
@@ -90,9 +90,17 @@ export class EventEmitter {
     return () => registered.filter(h => h !== handler);
   }
 
-  emit(event, data) {
+  _emit(event, data) {
     const registered = this.handlers[event] || [];
     registered.forEach(handler => handler(data));
+  }
+
+  emit(event, data) {
+    this._emit(event, data);
+    this._emit("ALL", {
+      event,
+      data
+    });
   }
 }
 

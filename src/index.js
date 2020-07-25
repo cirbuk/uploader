@@ -2,9 +2,12 @@ import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
 import { promiseSerial } from "./util";
+import { events as uploaderEvents } from "./constants";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
+
+export const events = uploaderEvents;
 
 const validateDataTransfer = (obj = {}) => {
   if (Array.isArray(obj.items)) {
@@ -95,7 +98,7 @@ export class Uploader {
           }
           let folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] || targetFolderId;
 
-          this.manager.createFolderFlowForPacket(pack, folderIdForNewFolder,  (err, eventData) => {
+          this.manager.createFolderFlowForPacket(pack, folderIdForNewFolder, (err, eventData) => {
             if (eventData) {
               resolve(eventData.folderCreated);
             }
@@ -143,70 +146,3 @@ export class Uploader {
 }
 
 Uploader.initialized = false;
-
-// const onNewUploadPacket = (targetFolderId, dispatch, urlObj, handlers, chunkingConfig, uploadPacket) =>
-//   promiseSerial(
-//     uploadPacket.map(pack => () => {
-//       const { folder } = pack;
-//       return new Promise(resolve => {
-//         if (folder.uploadInTargetFolder) {
-//           //? If no folder needs to be created, skip createFolderFlow
-//           resolve({ id: targetFolderId });
-//           return FlowManager.uploadFilesFlow({ id: targetFolderId }, pack.files, dispatch, urlObj, handlers, chunkingConfig);
-//         }
-//         const folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] ?
-//           FlowManager.folderIdForPathCache[folder.onlyPath] : targetFolderId;
-//
-//         UploadFlowManager.createFolderFlowForPacket(pack, folderIdForNewFolder, urlObj.folderCreationUrl, handlers, ({ type, payload }) => {
-//           if (type === "FOLDER_CREATED") {
-//             resolve(payload.folderCreated);
-//           }
-//           dispatch({ type, payload });
-//         });
-//       });
-//     }));
-//
-// export const upload = ({ dataTransfer, files, targetFolderId, dispatch, urlObj, handlers, chunkingConfig }) => {
-//   if (dataTransfer) {
-//     if (dataTransfer.items.length === 1 && dataTransfer.items[0].webkitGetAsEntry().isFile) {
-//       const files = [];
-//       const fileEntry = dataTransfer.files[0];
-//       fileEntry.file = callback => {
-//         callback(fileEntry);
-//       };
-//       files.push(fileEntry);
-//       const packet = [{
-//         folder: {
-//           uploadInTargetFolder: true,
-//           name: '',
-//           fullPath: '/root',
-//           onlyPath: ''
-//         },
-//         files
-//       }];
-//       onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
-//     } else {
-//       getUploadPacket(dataTransfer.items, onNewUploadPacket.bind(null, targetFolderId, dispatch, urlObj, handlers, chunkingConfig));
-//     }
-//   } else if (files.length > 0) {
-//     const fileEntries = [];
-//     //? Convert FileList into FileEntries
-//     for (let i = 0; i < files.length; i++) {
-//       const fileEntry = files[i];
-//       fileEntry.file = callback => {
-//         callback(fileEntry);
-//       };
-//       fileEntries.push(fileEntry);
-//     }
-//     const packet = [{
-//       folder: {
-//         uploadInTargetFolder: true,
-//         name: '',
-//         fullPath: '/root',
-//         onlyPath: ''
-//       },
-//       files: fileEntries
-//     }];
-//     onNewUploadPacket(targetFolderId, dispatch, urlObj, handlers, chunkingConfig, packet);
-//   }
-// };

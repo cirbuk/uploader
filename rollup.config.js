@@ -1,25 +1,23 @@
-import resolve from 'rollup-plugin-node-resolve';
-import commonjs from 'rollup-plugin-commonjs';
-import pkg from './package.json';
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import babel from "@rollup/plugin-babel";
 import { terser } from "rollup-plugin-terser";
-import babel from "rollup-plugin-babel";
-import sourcemaps from 'rollup-plugin-sourcemaps';
+import pkg from './package.json';
 
 export default [{
   input: 'src/index.js',
   output: {
     //Change output library name
-    name: 'asset-uploader',
+    name: 'assetUploader',
     file: pkg.browser,
     format: 'umd',
     sourcemap: true,
-    global: {
+    globals: {
       "@kubric/litedash": "litedash"
     }
   },
   external: ["@kubric/litedash"],
   plugins: [
-    sourcemaps(),
     resolve({
       browser: true,
       preferBuiltins: false
@@ -38,7 +36,7 @@ export default [{
       extensions: ['.js', '.ts']
     }),
     commonjs(), // so Rollup can convert external deps to ES6
-    // terser()
+    terser()
   ]
 }, {
   input: 'src/index.js',
