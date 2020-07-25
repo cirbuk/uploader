@@ -36,7 +36,7 @@ export default [{
       extensions: ['.js', '.ts']
     }),
     commonjs(), // so Rollup can convert external deps to ES6
-    terser()
+    // terser()
   ]
 }, {
   input: 'src/index.js',

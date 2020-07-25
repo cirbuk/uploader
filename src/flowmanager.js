@@ -8,6 +8,7 @@ import {
 } from './util.js';
 import Axios from 'axios';
 import { messages, events } from './constants';
+import { isValidString } from "@kubric/litedash";
 
 export default class FlowManager extends EventEmitter {
   static init({ chunking, urls }) {
@@ -22,6 +23,9 @@ export default class FlowManager extends EventEmitter {
 
   createFolderFlowForPacket(pack, targetFolderId, callback) {
     const folderCreationUrl = FlowManager.apiUrls.createFolder;
+    if (!isValidString(folderCreationUrl)) {
+      throw new Error("No API provided for folder creation");
+    }
     const { folder } = pack;
     return Axios.request({
         url: folderCreationUrl,
@@ -39,7 +43,7 @@ export default class FlowManager extends EventEmitter {
           parentFolderId: targetFolderId,
           appendAt: 'start'
         };
-        callback(null,eventData);
+        callback(null, eventData);
         FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
         this.emit(events.FOLDER_CREATED, eventData);
         if (pack.files.length > 0) {

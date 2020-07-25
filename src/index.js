@@ -61,8 +61,6 @@ export class Uploader {
               }) {
     if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrls" is a mandatory config option.`);
-    } else if (!isValidString(createFolder)) {
-      throw new Error(`"urls.createFolder" is a mandatory config option.`);
     }
     FlowManager.init({
       chunking,
