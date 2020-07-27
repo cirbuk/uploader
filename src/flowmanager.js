@@ -7,7 +7,7 @@ import {
   initiateChunkUpload
 } from './util.js';
 import Axios from 'axios';
-import { messages, events } from './constants';
+import { messages, events, UploaderEvents } from './constants';
 import { isValidString } from "@kubric/litedash";
 
 export default class FlowManager extends EventEmitter {
@@ -16,9 +16,9 @@ export default class FlowManager extends EventEmitter {
     FlowManager.apiUrls = urls;
   };
 
-  constructor(targetFolderId) {
+  constructor(setUploaderData) {
     super();
-    this.targetFolderId = targetFolderId;
+    this.setUploaderData = setUploaderData;
   }
 
   createFolderFlowForPacket(pack, targetFolderId, callback) {
@@ -86,6 +86,13 @@ export default class FlowManager extends EventEmitter {
         };
         initiateChunkUpload.call(this, chunkTempIds, tempIds, file.name, targetFolder.id, index);
         start = end;
+        // this.emit(events.FILE_UPLOAD_INITIATED, {
+        //   name: file.name,
+        //   meta: {
+        //     folder: targetFolder.id
+        //   },
+        //   taskId: tempIds[0]
+        // });
         return fileEntry;
       })
 
@@ -97,6 +104,14 @@ export default class FlowManager extends EventEmitter {
           meta: {
             folder: targetFolder.id
           },
+          taskId: tempIds[index]
+        });
+        this.emitUploader(UploaderEvents.UPLOAD_INITIATED, {
+          filename: file.name,
+          size: file.size,
+          progress: 0,
+          isComplete: false,
+          isError: false,
           taskId: tempIds[index]
         });
       });
@@ -130,11 +145,19 @@ export default class FlowManager extends EventEmitter {
               const url = urls[key];
               const file = chunksToBeUploaded[index];
               const tempTaskId = chunkTempIds[index];
-              this.emit(events.CHUNK_UPLOAD_PROGRESS, {
-                progress: 1,
-                chunkTaskId: tempTaskId,
-                taskId: tempIds[0]
-              })
+              // this.emitUploader(events.CHUNK_UPLOAD_PROGRESS, {
+              //   progress: 1,
+              //   chunkTaskId: tempTaskId,
+              //   taskId: tempIds[0]
+              // });
+              // this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+              //   progress: 1,
+              //   taskId: tempTaskId
+              // });
+              // this.emit(events.FILE_UPLOAD_PROGRESS, {
+              //   progress: 1,
+              //   taskId: tempIds[0]
+              // });
               const extension = getExtension(file);
               if (url && isFileTypeSupported(extension)) {
                 return Axios.request({
@@ -144,11 +167,20 @@ export default class FlowManager extends EventEmitter {
                     onUploadProgress: (progressData) => {
                       const { loaded, total } = progressData;
                       const percent = Math.round((loaded / total) * 100);
+                      
                       this.emit(events.CHUNK_UPLOAD_PROGRESS, {
                         progress: percent,
                         taskId: tempIds[0],
                         chunkTaskId: tempTaskId
                       });
+                      // this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+                      //   progress: 1,
+                      //   taskId: tempIds[0]
+                      // });
+                      // this.emit(events.FILE_UPLOAD_PROGRESS, {
+                      //   progress: 1,
+                      //   taskId: tempIds[0]
+                      // });
                     }
                   })
                   .then(e => {
@@ -177,6 +209,10 @@ export default class FlowManager extends EventEmitter {
             const fileEntry = whiteListedFileEntries[index];
             fileEntry.file(file => {
               const tempTaskId = tempIds[index];
+              this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+                progress: 1,
+                taskId: tempTaskId
+              });
               this.emit(events.FILE_UPLOAD_PROGRESS, {
                 progress: 1,
                 taskId: tempTaskId
@@ -191,6 +227,10 @@ export default class FlowManager extends EventEmitter {
                     onUploadProgress: (progressData) => {
                       const { loaded, total } = progressData;
                       const percent = Math.round((loaded / total) * 100)
+                      this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+                        progress: percent,
+                        taskId: tempTaskId
+                      });
                       this.emit(events.FILE_UPLOAD_PROGRESS, {
                         progress: percent,
                         taskId: tempTaskId,
@@ -199,15 +239,27 @@ export default class FlowManager extends EventEmitter {
                     }
                   })
                   .then(() => {
+                    this.emitUploader(UploaderEvents.UPLOAD_COMPLETED, {
+                      isComplete: true,
+                      taskId: tempTaskId
+                    });
                     this.emit(events.FILE_UPLOAD_COMPLETED, uploadUrlData);
                   })
                   .catch(error => {
+                    this.emitUploader(UploaderEvents.UPLOAD_FAILED, {
+                      isError: true,
+                      taskId: tempTaskId
+                    });
                     this.emit(events.FILE_UPLOAD_FAILED, {
                       error,
                       taskId: tempTaskId
                     });
                   });
               } else {
+                this.emitUploader(UploaderEvents.UPLOAD_FAILED, {
+                  isError: true,
+                  taskId: tempTaskId
+                });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
                   taskId: tempTaskId
                 });

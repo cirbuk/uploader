@@ -2,7 +2,8 @@ import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
 import { promiseSerial } from "./util";
-import { events as uploaderEvents } from "./constants";
+import { events as uploaderEvents, UploaderEvents } from "./constants";
+import reducer from './reducer';
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
@@ -77,9 +78,20 @@ export class Uploader {
     Uploader.initialized = true;
   }
 
+  #uploaderData = [];
+
   constructor(targetFolderId = "/root") {
     this.targetFolderId = targetFolderId;
-    this.manager = new FlowManager(this.targetFolderId);
+    this.manager = new FlowManager();
+    this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
+  }
+
+  setUploaderData(obj) {
+    this.#uploaderData = reducer(this.#uploaderData, obj)
+  }
+
+  stats() {
+    return this.#uploaderData;
   }
 
   on(event, handler) {

@@ -95,6 +95,13 @@ export class EventEmitter {
     registered.forEach(handler => handler(data));
   }
 
+  emitUploader(event, data) {
+    this._emit("ALL_UPLOADER", {
+      event,
+      data
+    });
+  }
+
   emit(event, data) {
     this._emit(event, data);
     this._emit("ALL", {
@@ -106,7 +113,7 @@ export class EventEmitter {
 
 export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount) {
   chunkTempIds.push(uuid());
-  this.emit(
+  this.emitUploader(
     "CHUNK_UPLOAD_INITIATED",{
       taskId: tempIds[0],
       name,
