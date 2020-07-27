@@ -2,26 +2,23 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import babel from "@rollup/plugin-babel";
 import { terser } from "rollup-plugin-terser";
+import json from '@rollup/plugin-json';
 import pkg from './package.json';
+
+const externalSet = new Set(["@kubric/litedash", "axios"]);
 
 export default [{
   input: 'src/index.js',
-  output: {
-    //Change output library name
-    name: 'assetUploader',
-    file: pkg.browser,
-    format: 'umd',
-    sourcemap: true,
-    globals: {
-      "@kubric/litedash": "litedash"
-    }
-  },
-  external: ["@kubric/litedash"],
+  output: [{
+    file: pkg.main,
+    format: 'cjs',
+    sourcemap: true
+  }, {
+    file: pkg.module,
+    format: 'esm',
+    sourcemap: true
+  }],
   plugins: [
-    resolve({
-      browser: true,
-      preferBuiltins: false
-    }),
     babel({
       babelrc: false,
       exclude: "node_modules/**",
@@ -35,17 +32,10 @@ export default [{
       ],
       extensions: ['.js', '.ts']
     }),
-    commonjs(), // so Rollup can convert external deps to ES6
+    resolve(),
+    commonjs(),
+    json(),
     // terser()
-  ]
-}, {
-  input: 'src/index.js',
-  output: [{
-    file: pkg.main,
-    format: 'cjs'
-  }, {
-    file: pkg.module,
-    format: 'es'
-  }],
-  external: ["axios", "@kubric/litedash"]
+  ],
+  external: id => id.includes('@babel/runtime') || externalSet.has(id)
 }];
