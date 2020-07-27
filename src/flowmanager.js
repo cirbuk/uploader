@@ -34,20 +34,21 @@ export default class FlowManager extends EventEmitter {
           name: folder.name,
           path: targetFolderId,
           asset_type: 'folder',
-          url: 'None'
+          url: 'None',
+          workspace_id: '69172727-4c56-418c-8f63-0e695831bbb5'
         }
       })
       .then(createdFolder => {
         const eventData = {
-          createdFolder: { ...createdFolder, created_time: new Date() },
+          createdFolder: { ...createdFolder.data, created_time: new Date() },
           parentFolderId: targetFolderId,
           appendAt: 'start'
         };
         callback(null, eventData);
-        FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.id;
+        FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.data.id;
         this.emit(events.FOLDER_CREATED, eventData);
         if (pack.files.length > 0) {
-          return this.uploadFilesFlow(createdFolder, pack.files);
+          return this.uploadFilesFlow(createdFolder.data, pack.files);
         }
       })
       .catch(error => {
@@ -100,21 +101,26 @@ export default class FlowManager extends EventEmitter {
         });
       });
     }
-    const detailsObj = {}
+    const detailsObj = {};
+    const dataObj = {};
     detailsObj[/\//.test(targetFolder.id) ? 'path' : "folder_id"] = targetFolder.id;
+    
     if (chunkCount > 1) {
-      detailsObj['parallel_chunks'] = chunkCount;
+      dataObj['parallel_chunks'] = chunkCount;
     }
     const { getUploadUrl } = FlowManager.apiUrls;
     return Axios.request({
         url: getUploadUrl,
         method: 'post',
-        data: whiteListedFileEntries.map(file => {
+        data: {
+          ...dataObj,
+          details: whiteListedFileEntries.map(file => {
             return {
               filename: file.name,
               ...detailsObj
             }
           })
+        }
       })
       .then(response => {
         if (chunkCount > 1) {

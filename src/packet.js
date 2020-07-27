@@ -9,17 +9,23 @@ function getAllFileEntries(dataTransferItemList) {
     queue.push(dataTransferItemList[i].webkitGetAsEntry());
   }
 
-  let promises = []
-  while (queue.length > 0) {
-    let entry = queue.shift();
-    if (entry.isFile) {
-      fileEntries.push(entry);
-    } else if (entry.isDirectory) {
-      directoryEntries.push(entry);
-      promises.push(readAllDirectoryEntries(entry.createReader())
-        .then((dirEntries = []) => queue.push(...dirEntries)));
+  const getEntries = () => {
+    while (queue.length > 0) {
+      let entry = queue.shift();
+      if (entry.isFile) {
+        fileEntries.push(entry);
+      } else if (entry.isDirectory) {
+        directoryEntries.push(entry);
+        promises.push(readAllDirectoryEntries(entry.createReader())
+          .then((dirEntries = []) => {
+            queue.push(...dirEntries);
+            getEntries();
+          }));
+      }
     }
   }
+  let promises = []
+  getEntries();
 
   return Promise.all(promises)
     .then(() => {
