@@ -4,6 +4,7 @@ import {
   isFileTypeSupported,
   EventEmitter,
   getChunkSizeArray,
+  initiateChunkUpload
 } from './util.js';
 import Axios from 'axios';
 import { messages, events, internalEvents } from './constants';
@@ -87,7 +88,7 @@ export default class FlowManager extends EventEmitter {
         fileEntry.file = callback => {
           callback(fileEntry);
         };
-        chunkTempIds.push(uuid());
+        initiateChunkUpload.call(this, chunkTempIds, tempIds, file.name, targetFolder.id, index, file);
         start = end;
         return fileEntry;
       });
@@ -148,7 +149,7 @@ export default class FlowManager extends EventEmitter {
       })
       .then(response => {
         if (chunkCount > 1) {
-          const { urls, uploadUrlData } = response.data[0];
+          const { urls, ...uploadUrlData } = response.data[0];
           Object.keys(urls)
             .map((key, index) => {
               const url = urls[key];

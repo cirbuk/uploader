@@ -118,7 +118,7 @@ export class EventEmitter {
   }
 }
 
-export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount) {
+export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount, file) {
   chunkTempIds.push(uuid());
   this.emitChunk(
     "CHUNK_UPLOAD_INITIATED", {
