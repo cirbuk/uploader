@@ -93,10 +93,10 @@ export default class FlowManager extends EventEmitter {
         return fileEntry;
       });
       this.emit(events.FILE_UPLOAD_INITIATED, {
-          filename: file.name,
-          path: targetFolder.id,
-          taskId: tempIds[0],
-          data: file._data
+        filename: file.name,
+        path: targetFolder.id,
+        taskId: tempIds[0],
+        data: file._data
       });
       this.emitUploader(internalEvents.UPLOAD_INITIATED, {
         filename: file.name,
@@ -127,7 +127,9 @@ export default class FlowManager extends EventEmitter {
     }
     const detailsObj = {};
     const dataObj = {};
-    detailsObj[/\//.test(targetFolder.id) ? 'path' : "folder_id"] = targetFolder.id;
+    if (!this.token) {
+      detailsObj[/\//.test(targetFolder.id) ? 'path' : "folder_id"] = targetFolder.id;
+    }
 
     if (chunkCount > 1) {
       dataObj['parallel_chunks'] = chunkCount;
@@ -214,7 +216,7 @@ export default class FlowManager extends EventEmitter {
                       });
                       this.emit(events.FILE_UPLOAD_COMPLETED, {
                         data: fileData,
-                      ...uploadUrlData 
+                        ...uploadUrlData
                       });
                     }
                   })
