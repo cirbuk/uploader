@@ -84,17 +84,17 @@ export class Uploader {
   }
 
   static getTotalProgress(taskList) {
-    const sum = taskList.reduce((acc, task) => acc+= task.progress, 0);
-    return sum/taskList.length;
+    const sum = taskList && taskList.length && taskList.reduce((acc, task) => acc+= task.progress, 0);
+    return sum ? sum/taskList.length : 0;
   }
 
 
 
-  constructor(targetFolderId = "/root") {
+  constructor({ targetFolderId = "/root", token } = {}) {
     this.targetFolderId = targetFolderId;
     this.getQueuedTasksProgress = this.getQueuedTasksProgress.bind(this);
     this.getChunkTasksProgress = this.getChunkTasksProgress.bind(this);
-    this.manager = new FlowManager(this.getQueuedTasksProgress, this.getChunkTasksProgress);
+    this.manager = new FlowManager(token, this.getQueuedTasksProgress, this.getChunkTasksProgress);
     this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
     this.manager.on("CHUNK_TASK", this.setChunkTaskData.bind(this));
     this.uploaderData = [];
@@ -107,7 +107,7 @@ export class Uploader {
 
   getChunkTasksProgress(taskId) {
     const task = this.chunkTaskData.filter(task => task.taskId === taskId);
-    return Uploader.getTotalProgress(task.chunkTasks);
+    return task ? Uploader.getTotalProgress(task.chunkTasks): 0;
   }
 
   getQueuedTasksProgress() {
