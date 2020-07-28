@@ -60,7 +60,7 @@ const parseInput = obj => {
 export class Uploader {
   static init({
                 chunking: {
-                  enableChunking = false,
+                  enable = false,
                   min = MIN_CHUNKSIZE,
                   max = MAX_CHUNKSIZE
                 },
@@ -71,7 +71,7 @@ export class Uploader {
     }
     FlowManager.init({
       chunking: {
-        enableChunking,
+        enable,
         min,
         max
       },

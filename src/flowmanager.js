@@ -69,7 +69,7 @@ export default class FlowManager extends EventEmitter {
     let chunkTempIds = [];
     let chunksToBeUploaded = [];
     let chunkCount = 0;
-    const { min: minSize, max: maxSize, enableChunking } = FlowManager.chunkingConfig;
+    const { min: minSize, max: maxSize, enable: enableChunking } = FlowManager.chunkingConfig;
 
     if (enableChunking && files.length === 1 && files[0].size >= minSize && files[0].size <= maxSize) {
       const file = files[0];
@@ -99,11 +99,10 @@ export default class FlowManager extends EventEmitter {
     } else {
       whiteListedFileEntries.map((file, index) => {
         this.emit(events.FILE_UPLOAD_INITIATED, {
-          name: file.name,
-          meta: {
-            folder: targetFolder.id
-          },
-          taskId: tempIds[index]
+          filename: file.name,
+          path: targetFolder.id,
+          taskId: tempIds[index],
+          data: file._data
         });
         this.emitUploader(internalEvents.UPLOAD_INITIATED, {
           filename: file.name,
@@ -191,12 +190,14 @@ export default class FlowManager extends EventEmitter {
                 taskId: tempTaskId
               });
               this.emit(events.FILE_UPLOAD_PROGRESS, {
+                data: file._data,
                 progress: 1,
-                taskId: tempTaskId
+                taskId: tempTaskId,
+                ...uploadUrlData
               });
               const extension = getExtension(file);
               if (uploadUrlData && uploadUrlData.url && isFileTypeSupported(extension)) {
-                const extn = file.name.split(".").pop();
+                const fileData = file._data;
                 return Axios.request({
                     method: 'post',
                     url: uploadUrlData.url,
@@ -208,10 +209,12 @@ export default class FlowManager extends EventEmitter {
                         progress: percent,
                         taskId: tempTaskId
                       });
-                      this.emit(events.FILE_UPLOAD_PROGRESS, {
+                      console.log(percent);
+                      percent > 0 && this.emit(events.FILE_UPLOAD_PROGRESS, {
+                        data: fileData,
                         progress: percent,
                         taskId: tempTaskId,
-                        uploadUrlData
+                        ...uploadUrlData
                       });
                     }
                   })
@@ -220,7 +223,11 @@ export default class FlowManager extends EventEmitter {
                       isComplete: true,
                       taskId: tempTaskId
                     });
-                    this.emit(events.FILE_UPLOAD_COMPLETED, uploadUrlData);
+                    this.emit(events.FILE_UPLOAD_COMPLETED, {
+                      data: fileData,
+                      taskId: tempTaskId,
+                      ...uploadUrlData
+                    });
                   })
                   .catch(error => {
                     this.emitUploader(internalEvents.UPLOAD_FAILED, {
@@ -228,8 +235,10 @@ export default class FlowManager extends EventEmitter {
                       taskId: tempTaskId
                     });
                     this.emit(events.FILE_UPLOAD_FAILED, {
+                      data: fileData,
                       error,
-                      taskId: tempTaskId
+                      taskId: tempTaskId,
+                      ...uploadUrlData
                     });
                   });
               } else {
