@@ -114,7 +114,7 @@ export class Uploader {
     const tasks = this.uploaderDataObj.totalData.filter((data) => {
       return !data.isComplete && !data.isError;
     });
-    return Uploader.getQueuedTasksProgress(tasks);
+    return Uploader.getTotalProgress(tasks);
   }
 
   setUploaderData(obj) {
@@ -130,11 +130,10 @@ export class Uploader {
     this.uploaderData = [];
   }
 
-  stats() {
+  getStats() {
       this.uploaderData = this.uploaderDataObj.totalData.filter(
-        (data) => {
-          !this.uploaderDataObj.clearedData.includes(data);
-        });
+        (data) => !this.uploaderDataObj.clearedData.includes(data)
+        );
     return this.uploaderData;
   }
 
