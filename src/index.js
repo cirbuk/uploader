@@ -3,7 +3,7 @@ import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
 import { promiseSerial } from "./util";
 import { events as uploaderEvents, UploaderEvents } from "./constants";
-import reducer from './reducer';
+import {uploadTaskReducer, chunkTaskReducer} from './reducer';
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
@@ -78,19 +78,57 @@ export class Uploader {
     Uploader.initialized = true;
   }
 
+  static getTotalProgress(taskList) {
+    const sum = taskList.reduce((acc, task) => acc+= task.progress, 0);
+    return sum/taskList.length;
+  }
+
   #uploaderData = [];
+  #uploaderDataObj = {
+    totalData: [],
+    clearedData: []
+  }
+  #chunkTaskData = [];
 
   constructor(targetFolderId = "/root") {
     this.targetFolderId = targetFolderId;
-    this.manager = new FlowManager();
+    this.getQueuedTasksProgress = this.getQueuedTasksProgress.bind(this);
+    this.getChunkTasksProgress = this.getChunkTasksProgress.bind(this);
+    this.manager = new FlowManager(this.getQueuedTasksProgress, this.getChunkTasksProgress);
     this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
+    this.manager.on("CHUNK_TASK", this.setChunkTaskData.bind(this));
+  }
+
+  getChunkTasksProgress(taskId) {
+    const task = this.#chunkTaskData.filter(task => task.taskId === taskId);
+    return Uploader.getTotalProgress(task.chunkTasks);
+  }
+
+  getQueuedTasksProgress() {
+    const tasks = this.#uploaderDataObj.totalData.filter((data) => {
+      return !data.isComplete && !data.isError;
+    });
+    return Uploader.getQueuedTasksProgress(tasks);
   }
 
   setUploaderData(obj) {
-    this.#uploaderData = reducer(this.#uploaderData, obj)
+    this.#uploaderDataObj.totalData = uploadTaskReducer(this.#uploaderDataObj.totalData, obj);
+  }
+
+  setChunkTaskData(obj) {
+    this.#chunkTaskData = chunkTaskReducer(this.#chunkTaskData, obj);
+  }
+
+  clearStats() {
+    this.#uploaderDataObj.clearedData = [...this.#uploaderDataObj.clearedData, this.#uploaderData];
+    this.#uploaderData = [];
   }
 
   stats() {
+      this.#uploaderData = this.#uploaderDataObj.totalData.filter(
+        (data) => {
+          !this.#uploaderDataObj.clearedData.includes(data);
+        });
     return this.#uploaderData;
   }
 

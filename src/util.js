@@ -102,6 +102,13 @@ export class EventEmitter {
     });
   }
 
+  emitChunk(event, data) {
+    this._emit("CHUNK_TASK", {
+      event,
+      data
+    });
+  }
+
   emit(event, data) {
     this._emit(event, data);
     this._emit("ALL", {
@@ -113,7 +120,7 @@ export class EventEmitter {
 
 export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount) {
   chunkTempIds.push(uuid());
-  this.emitUploader(
+  this.emitChunk(
     "CHUNK_UPLOAD_INITIATED",{
       taskId: tempIds[0],
       name,

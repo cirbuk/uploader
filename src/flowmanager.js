@@ -16,9 +16,10 @@ export default class FlowManager extends EventEmitter {
     FlowManager.apiUrls = urls;
   };
 
-  constructor(setUploaderData) {
+  constructor(getQueuedTasksProgress, getChunkTasksProgress) {
     super();
-    this.setUploaderData = setUploaderData;
+    this.getQueuedTasksProgress = getQueuedTasksProgress;
+    this.getChunkTasksProgress = getChunkTasksProgress;
   }
 
   createFolderFlowForPacket(pack, targetFolderId, callback) {
@@ -86,16 +87,23 @@ export default class FlowManager extends EventEmitter {
         };
         initiateChunkUpload.call(this, chunkTempIds, tempIds, file.name, targetFolder.id, index);
         start = end;
-        // this.emit(events.FILE_UPLOAD_INITIATED, {
-        //   name: file.name,
-        //   meta: {
-        //     folder: targetFolder.id
-        //   },
-        //   taskId: tempIds[0]
-        // });
         return fileEntry;
-      })
-
+      });
+      this.emit(events.FILE_UPLOAD_INITIATED, {
+        name: file.name,
+        meta: {
+          folder: targetFolder.id
+        },
+        taskId: tempIds[0]
+      });
+      this.emitUploader(UploaderEvents.UPLOAD_INITIATED, {
+        filename: file.name,
+        size: file.size,
+        progress: 0,
+        isComplete: false,
+        isError: false,
+        taskId: tempIds[index]
+      });
       chunkCount = chunksToBeUploaded.length;
     } else {
       whiteListedFileEntries.map((file, index) => {
@@ -145,19 +153,19 @@ export default class FlowManager extends EventEmitter {
               const url = urls[key];
               const file = chunksToBeUploaded[index];
               const tempTaskId = chunkTempIds[index];
-              // this.emitUploader(events.CHUNK_UPLOAD_PROGRESS, {
-              //   progress: 1,
-              //   chunkTaskId: tempTaskId,
-              //   taskId: tempIds[0]
-              // });
-              // this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
-              //   progress: 1,
-              //   taskId: tempTaskId
-              // });
-              // this.emit(events.FILE_UPLOAD_PROGRESS, {
-              //   progress: 1,
-              //   taskId: tempIds[0]
-              // });
+              this.emitChunk(UploaderEvents.CHUNK_UPLOAD_PROGRESS, {
+                progress: 1,
+                chunkTaskId: tempTaskId,
+                taskId: tempIds[0]
+              });
+              this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+                progress: this.getChunkTasksProgress(tempIds[0]),
+                taskId: tempIds[0]
+              });
+              this.emit(events.FILE_UPLOAD_PROGRESS, {
+                progress: this.getChunkTasksProgress(tempIds[0]),
+                taskId: tempIds[0]
+              });
               const extension = getExtension(file);
               if (url && isFileTypeSupported(extension)) {
                 return Axios.request({
@@ -167,39 +175,56 @@ export default class FlowManager extends EventEmitter {
                     onUploadProgress: (progressData) => {
                       const { loaded, total } = progressData;
                       const percent = Math.round((loaded / total) * 100);
-                      
-                      this.emit(events.CHUNK_UPLOAD_PROGRESS, {
+                      this.emitChunk(UploaderEvents.CHUNK_UPLOAD_PROGRESS, {
                         progress: percent,
-                        taskId: tempIds[0],
-                        chunkTaskId: tempTaskId
+                        chunkTaskId: tempTaskId,
+                        taskId: tempIds[0]
                       });
-                      // this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
-                      //   progress: 1,
-                      //   taskId: tempIds[0]
-                      // });
-                      // this.emit(events.FILE_UPLOAD_PROGRESS, {
-                      //   progress: 1,
-                      //   taskId: tempIds[0]
-                      // });
+                      this.emitUploader(UploaderEvents.UPLOAD_PROGRESS, {
+                        progress: this.getChunkTasksProgress(tempIds[0]),
+                        taskId: tempIds[0]
+                      });
+                      this.emit(events.FILE_UPLOAD_PROGRESS, {
+                        progress: this.getChunkTasksProgress(tempIds[0]),
+                        taskId: tempIds[0]
+                      });
+                      this.emit(events.TOTAL_PROGRESS, {
+                        progress: this.getQueuedTasksProgress(),
+                        taskId: tempIds[0]
+                      });
                     }
                   })
                   .then(e => {
-                    this.emit(events.CHUNK_UPLOAD_COMPLETED, {
+                    this.emitChunk(UploaderEvents.CHUNK_UPLOAD_COMPLETED, {
                       taskId: tempIds[0],
                       chunkTaskId: tempTaskId
                     });
+
+                    if (this.getChunkTasksProgress(tempIds[0]) === 100) {
+                      this.emitUploader(UploaderEvents.UPLOAD_COMPLETED, {
+                        isComplete: true,
+                        taskId: tempTaskId
+                      });
+                      this.emit(events.FILE_UPLOAD_COMPLETED, uploadUrlData);
+                    }
                   })
-                  .catch(exception => {
-                    this.emit(events.CHUNK_UPLOAD_FAILED, {
+                  .catch(error => {
+                    this.emitUploader(UploaderEvents.UPLOAD_FAILED, {
+                      isError: true,
+                      taskId: tempIds[0]
+                    });
+                    this.emit(events.FILE_UPLOAD_FAILED, {
                       message: messages.FILE_UPLOAD_FAILED,
-                      exception,
-                      taskId: tempIds[0],
-                      chunkTaskId: tempTaskId
+                      error,
+                      taskId: tempIds[0]
                     });
                   });
               } else {
+                this.emitUploader(UploaderEvents.UPLOAD_FAILED, {
+                  isError: true,
+                  taskId: tempIds[0]
+                });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
-                  message: messages.GET_FILE_UPLOAD_URL_FAILED,
                   taskId: tempIds[0]
                 });
               }
@@ -235,6 +260,10 @@ export default class FlowManager extends EventEmitter {
                         progress: percent,
                         taskId: tempTaskId,
                         uploadUrlData
+                      });
+                      this.emit(events.TOTAL_PROGRESS, {
+                        progress: this.getQueuedTasksProgress(),
+                        taskId: tempTaskId
                       });
                     }
                   })
