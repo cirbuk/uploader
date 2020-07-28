@@ -106,7 +106,7 @@ export class Uploader {
 
   getChunkTasksProgress(taskId) {
     const task = this.chunkTaskData.filter(task => task.taskId === taskId);
-    return task ? Uploader.getTotalProgress(task.chunkTasks) : 0;
+    return task[0] ? Uploader.getTotalProgress(task[0].chunkTasks) : 0;
   }
 
   getQueuedTasksProgress() {
@@ -125,7 +125,7 @@ export class Uploader {
   }
 
   clearStats() {
-    this.uploaderDataObj.clearedData = [...this.uploaderDataObj.clearedData, this.uploaderData];
+    this.uploaderDataObj.clearedData = [...this.uploaderDataObj.clearedData, ...this.uploaderData];
     this.uploaderData = [];
   }
 
