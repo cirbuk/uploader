@@ -2,7 +2,7 @@ import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
 import { events as uploaderEvents } from "./constants";
-import {uploadTaskReducer, chunkTaskReducer} from './reducer';
+import { uploadTaskReducer, chunkTaskReducer } from './reducer';
 import { getHumanFileSize, promiseSerial } from "./util";
 
 const MIN_CHUNKSIZE = 52428800;
@@ -84,10 +84,9 @@ export class Uploader {
   }
 
   static getTotalProgress(taskList) {
-    const sum = taskList && taskList.length && taskList.reduce((acc, task) => acc+= task.progress, 0);
-    return sum ? sum/taskList.length : 0;
+    const sum = taskList && taskList.length && taskList.reduce((acc, task) => acc += task.progress, 0);
+    return sum ? sum / taskList.length : 0;
   }
-
 
 
   constructor({ targetFolderId = "/root", token } = {}) {
@@ -107,7 +106,7 @@ export class Uploader {
 
   getChunkTasksProgress(taskId) {
     const task = this.chunkTaskData.filter(task => task.taskId === taskId);
-    return task ? Uploader.getTotalProgress(task.chunkTasks): 0;
+    return task ? Uploader.getTotalProgress(task.chunkTasks) : 0;
   }
 
   getQueuedTasksProgress() {
@@ -131,9 +130,9 @@ export class Uploader {
   }
 
   getStats() {
-      this.uploaderData = this.uploaderDataObj.totalData.filter(
-        (data) => !this.uploaderDataObj.clearedData.includes(data)
-        );
+    this.uploaderData = this.uploaderDataObj.totalData.filter(
+      (data) => !this.uploaderDataObj.clearedData.includes(data)
+    );
     return this.uploaderData;
   }
 
