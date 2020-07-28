@@ -83,9 +83,9 @@ export class Uploader {
     Uploader.initialized = true;
   }
 
-  constructor(targetFolderId = "/root") {
+  constructor({ targetFolderId = "/root", token } = {}) {
     this.targetFolderId = targetFolderId;
-    this.manager = new FlowManager();
+    this.manager = new FlowManager(token);
     this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
     this.uploaderData = [];
   }

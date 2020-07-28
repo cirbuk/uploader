@@ -15,9 +15,9 @@ export default class FlowManager extends EventEmitter {
     FlowManager.apiUrls = urls;
   };
 
-  constructor(setUploaderData) {
+  constructor(token) {
     super();
-    this.setUploaderData = setUploaderData;
+    this.token = token;
   }
 
   createFolderFlowForPacket(pack, targetFolderId, callback) {
@@ -30,11 +30,13 @@ export default class FlowManager extends EventEmitter {
         url: folderCreationUrl,
         method: 'post',
         data: {
-          name: folder.name,
-          path: targetFolderId,
-          asset_type: 'folder',
-          url: 'None',
-          workspace_id: '69172727-4c56-418c-8f63-0e695831bbb5'
+          data: {
+            name: folder.name,
+            path: targetFolderId,
+            asset_type: 'folder',
+            url: 'None',
+          },
+          token: this.token
         }
       })
       .then(createdFolder => {
@@ -127,6 +129,7 @@ export default class FlowManager extends EventEmitter {
         method: 'post',
         data: {
           ...dataObj,
+          token: this.token,
           details: whiteListedFileEntries.map(file => {
             return {
               filename: file.name,
