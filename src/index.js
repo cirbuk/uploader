@@ -1,13 +1,18 @@
 import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
-import { promiseSerial } from "./util";
+import { getHumanFileSize, promiseSerial } from "./util";
 import { events as uploaderEvents } from "./constants";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
 
 export const events = uploaderEvents;
+
+const addFileSizes = files => {
+  files.forEach(file => file._parsedSize = getHumanFileSize(file.size));
+  return files;
+}
 
 const validateDataTransfer = (obj = {}) => {
   if (obj.items instanceof DataTransferItemList) {
@@ -54,20 +59,20 @@ const parseInput = obj => {
 export class Uploader {
   static init({
                 chunking: {
-                    enableChunking = false,
-                    min = MIN_CHUNKSIZE,
-                    max = MAX_CHUNKSIZE
-                  },
-                 urls: { getUploadUrl, createFolder } = {}
+                  enableChunking = false,
+                  min = MIN_CHUNKSIZE,
+                  max = MAX_CHUNKSIZE
+                },
+                urls: { getUploadUrl, createFolder } = {}
               }) {
     if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrl" is a mandatory config option.`);
     }
     FlowManager.init({
-      chunking : {
-          enableChunking,
-          min,
-          max
+      chunking: {
+        enableChunking,
+        min,
+        max
       },
       urls: {
         getUploadUrl,
@@ -108,6 +113,25 @@ export class Uploader {
           });
         });
       }));
+  }
+
+  static getFiles(obj) {
+    const results = parseInput(obj);
+    if (results) {
+      const { type, files = [] } = results;
+      if (type === "dropped" && files.length > 0) {
+        return getUploadPacket(files)
+          .then((entries = []) => entries.reduce((acc, { files = [] }) => [...acc, ...files], []))
+          .then(addFileSizes);
+      } else {
+        const filesArr = [];
+        for (let i = 0; i < files.length; i++) {
+          filesArr[i] = files[i];
+        }
+        return Promise.resolve(addFileSizes(filesArr));
+      }
+    }
+    return Promise.reject("Invalid object");
   }
 
   // Any of the below 3 can be passed here
