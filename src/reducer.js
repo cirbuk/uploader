@@ -1,4 +1,4 @@
-import { UploaderEvents } from './constants';
+import { internalEvents } from './constants';
 
 const getTasks = (tasks, data) => {
     const taskObj = { curTasks: [], othTasks: [] };
@@ -15,11 +15,11 @@ const getTasks = (tasks, data) => {
 export const uploadTaskReducer = (tasks = [], action) => {
     const { event, data = {} } = action;
     switch (event) {
-        case UploaderEvents.UPLOAD_INITIATED:
+        case internalEvents.UPLOAD_INITIATED:
             return [...tasks, data];
-        case UploaderEvents.UPLOAD_COMPLETED:
-        case UploaderEvents.UPLOAD_FAILED:
-        case UploaderEvents.UPLOAD_PROGRESS:
+        case internalEvents.UPLOAD_COMPLETED:
+        case internalEvents.UPLOAD_FAILED:
+        case internalEvents.UPLOAD_PROGRESS:
             if (tasks.filter(task => task.taskId === data.taskId).length > 0) {
                 return tasks.map(task => (data.taskId === task.taskId ? {
                     ...task,
@@ -38,7 +38,7 @@ export const uploadTaskReducer = (tasks = [], action) => {
 export const chunkTaskReducer = (tasks = [], action) => {
     const { event, data = {} } = action;
     switch (event) {
-            case UploaderEvents.CHUNK_UPLOAD_INITIATED:
+            case internalEvents.CHUNK_UPLOAD_INITIATED:
                 const { curTasks, othTasks } = getTasks(tasks, data);
                 if (curTasks.length === 0) {
                   return [
@@ -76,7 +76,7 @@ export const chunkTaskReducer = (tasks = [], action) => {
                     }
                   ];
                 }
-              case UploaderEvents.CHUNK_UPLOAD_PROGRESS:
+              case internalEvents.CHUNK_UPLOAD_PROGRESS:
                 const { curTasks: currTasks, othTasks: otherTasks } = getTasks(tasks, data);
                 let progressOld = 0;
           

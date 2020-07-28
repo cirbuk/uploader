@@ -1,14 +1,19 @@
 import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/litedash";
-import { promiseSerial } from "./util";
-import { events as uploaderEvents, UploaderEvents } from "./constants";
+import { events as uploaderEvents } from "./constants";
 import {uploadTaskReducer, chunkTaskReducer} from './reducer';
+import { getHumanFileSize, promiseSerial } from "./util";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
 
 export const events = uploaderEvents;
+
+const addFileSizes = files => {
+  files.forEach(file => file._parsedSize = getHumanFileSize(file.size));
+  return files;
+}
 
 const validateDataTransfer = (obj = {}) => {
   if (obj.items instanceof DataTransferItemList) {
@@ -55,20 +60,20 @@ const parseInput = obj => {
 export class Uploader {
   static init({
                 chunking: {
-                    enableChunking = false,
-                    min = MIN_CHUNKSIZE,
-                    max = MAX_CHUNKSIZE
-                  },
-                 urls: { getUploadUrl, createFolder } = {}
+                  enable = false,
+                  min = MIN_CHUNKSIZE,
+                  max = MAX_CHUNKSIZE
+                },
+                urls: { getUploadUrl, createFolder } = {}
               }) {
     if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrl" is a mandatory config option.`);
     }
     FlowManager.init({
-      chunking : {
-          enableChunking,
-          min,
-          max
+      chunking: {
+        enable,
+        min,
+        max
       },
       urls: {
         getUploadUrl,
@@ -83,12 +88,7 @@ export class Uploader {
     return sum/taskList.length;
   }
 
-  #uploaderData = [];
-  #uploaderDataObj = {
-    totalData: [],
-    clearedData: []
-  }
-  #chunkTaskData = [];
+
 
   constructor(targetFolderId = "/root") {
     this.targetFolderId = targetFolderId;
@@ -97,39 +97,45 @@ export class Uploader {
     this.manager = new FlowManager(this.getQueuedTasksProgress, this.getChunkTasksProgress);
     this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
     this.manager.on("CHUNK_TASK", this.setChunkTaskData.bind(this));
+    this.uploaderData = [];
+    this.uploaderDataObj = {
+      totalData: [],
+      clearedData: []
+    }
+    this.chunkTaskData = [];
   }
 
   getChunkTasksProgress(taskId) {
-    const task = this.#chunkTaskData.filter(task => task.taskId === taskId);
+    const task = this.chunkTaskData.filter(task => task.taskId === taskId);
     return Uploader.getTotalProgress(task.chunkTasks);
   }
 
   getQueuedTasksProgress() {
-    const tasks = this.#uploaderDataObj.totalData.filter((data) => {
+    const tasks = this.uploaderDataObj.totalData.filter((data) => {
       return !data.isComplete && !data.isError;
     });
     return Uploader.getQueuedTasksProgress(tasks);
   }
 
   setUploaderData(obj) {
-    this.#uploaderDataObj.totalData = uploadTaskReducer(this.#uploaderDataObj.totalData, obj);
+    this.uploaderDataObj.totalData = uploadTaskReducer(this.uploaderDataObj.totalData, obj);
   }
 
   setChunkTaskData(obj) {
-    this.#chunkTaskData = chunkTaskReducer(this.#chunkTaskData, obj);
+    this.chunkTaskData = chunkTaskReducer(this.chunkTaskData, obj);
   }
 
   clearStats() {
-    this.#uploaderDataObj.clearedData = [...this.#uploaderDataObj.clearedData, this.#uploaderData];
-    this.#uploaderData = [];
+    this.uploaderDataObj.clearedData = [...this.uploaderDataObj.clearedData, this.uploaderData];
+    this.uploaderData = [];
   }
 
   stats() {
-      this.#uploaderData = this.#uploaderDataObj.totalData.filter(
+      this.uploaderData = this.uploaderDataObj.totalData.filter(
         (data) => {
-          !this.#uploaderDataObj.clearedData.includes(data);
+          !this.uploaderDataObj.clearedData.includes(data);
         });
-    return this.#uploaderData;
+    return this.uploaderData;
   }
 
   on(event, handler) {
@@ -158,6 +164,25 @@ export class Uploader {
           });
         });
       }));
+  }
+
+  static getFiles(obj) {
+    const results = parseInput(obj);
+    if (results) {
+      const { type, files = [] } = results;
+      if (type === "dropped" && files.length > 0) {
+        return getUploadPacket(files)
+          .then((entries = []) => entries.reduce((acc, { files = [] }) => [...acc, ...files], []))
+          .then(addFileSizes);
+      } else {
+        const filesArr = [];
+        for (let i = 0; i < files.length; i++) {
+          filesArr[i] = files[i];
+        }
+        return Promise.resolve(addFileSizes(filesArr));
+      }
+    }
+    return Promise.reject("Invalid object");
   }
 
   // Any of the below 3 can be passed here

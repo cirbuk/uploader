@@ -17,7 +17,7 @@ export const events = {
   ALL: "ALL"
 };
 
-export const UploaderEvents = {
+export const internalEvents = {
   UPLOAD_INITIATED: "UPLOAD_INITIATED",
   UPLOAD_PROGRESS: "UPLOAD_PROGRESS",
   UPLOAD_COMPLETED: "UPLOAD_COMPLETED",

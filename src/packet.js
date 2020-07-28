@@ -1,3 +1,5 @@
+import { isFunction } from "@kubric/litedash";
+
 function getAllFileEntries(dataTransferItemList) {
   let fileEntries = [];
   let directoryEntries = [];
@@ -92,5 +94,8 @@ function readEntriesPromise(directoryReader) {
 
 export const getUploadPacket = (items, callback) =>
   getAllFileEntries(items)
-    .then(callback);
+    .then(response => {
+      isFunction(callback) && callback(response);
+      return response;
+    });
   
