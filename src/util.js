@@ -84,10 +84,12 @@ export class EventEmitter {
 
   on(event, handler) {
     const registered = this.handlers[event] || [];
-    const alreadyRegistered = registered.length > 0 && registered.every(h => h !== handler);
+    const alreadyRegistered = registered.length > 0 && registered.some(h => h === handler);
     !alreadyRegistered && registered.push(handler);
     this.handlers[event] = registered;
-    return () => registered.filter(h => h !== handler);
+    return () => {
+      this.handlers[event] = registered.filter(h => h !== handler);
+    };
   }
 
   _emit(event, data) {
@@ -123,13 +125,14 @@ export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount,
   this.emitChunk(
     "CHUNK_UPLOAD_INITIATED", {
       filename: name,
-          path: id,
-          taskId: tempIds[0],
-          data: file._data,
-          chunkTaskId: chunkTempIds[chunkCount]
+      path: id,
+      taskId: tempIds[0],
+      data: file._data,
+      chunkTaskId: chunkTempIds[chunkCount]
     });
   return chunkTempIds;
 }
+
 export const getHumanFileSize = (fileSizeInBytes) => {
   if (fileSizeInBytes) {
     let size = fileSizeInBytes;

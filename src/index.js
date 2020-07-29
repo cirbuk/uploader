@@ -137,7 +137,7 @@ export class Uploader {
   }
 
   on(event, handler) {
-    this.manager.on(event, handler);
+    return this.manager.on(event, handler);
   }
 
   onNewUploadPacket(uploadPacket) {
