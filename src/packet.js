@@ -11,25 +11,24 @@ function getAllFileEntries(dataTransferItemList) {
     queue.push(dataTransferItemList[i].webkitGetAsEntry());
   }
 
-  const getEntries = () => {
+  const getEntries = queue => {
+    const promises = [];
     while (queue.length > 0) {
       let entry = queue.shift();
       if (entry.isFile) {
+        entry.file((fl) => console.log(fl));
         fileEntries.push(entry);
       } else if (entry.isDirectory) {
         directoryEntries.push(entry);
-        promises.push(readAllDirectoryEntries(entry.createReader())
-          .then((dirEntries = []) => {
-            queue.push(...dirEntries);
-            getEntries();
-          }));
+        promises.push(
+          readAllDirectoryEntries(entry.createReader())
+            .then((dirEntries = []) => getEntries(dirEntries))
+        );
       }
     }
+    return Promise.all(promises);
   }
-  let promises = []
-  getEntries();
-
-  return Promise.all(promises)
+  return getEntries(queue)
     .then(() => {
       let uploadPacket = [];
 
@@ -54,7 +53,7 @@ function getAllFileEntries(dataTransferItemList) {
       if (rootFiles.length > 0) {
         uploadPacket.push({
           folder: {
-            uploadInTargerFolder: true,
+            uploadInTargetFolder: true,
             name: '',
             fullPath: '/root',
             onlyPath: ''
