@@ -107,11 +107,12 @@ export default class FlowManager extends EventEmitter {
           this.emitUploader(internalEvents.UPLOAD_INITIATED,
             getDataObject(true, file, tempIds[index]));
         } else {
+          file._data ? fl._data = file._data : '';
           file.file((fl) => {
             this.emit(events.FILE_UPLOAD_INITIATED,
-              getDataObject(false, { ...file, ...fl }, tempIds[index], targetFolder.id));
+              getDataObject(false, fl, tempIds[index], targetFolder.id));
             this.emitUploader(internalEvents.UPLOAD_INITIATED,
-              getDataObject(true, { ...file, ...fl }, tempIds[index]));
+              getDataObject(true, fl, tempIds[index]));
           });
         }
       });

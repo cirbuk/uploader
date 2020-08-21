@@ -135,7 +135,7 @@ export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount,
 
 export function getDataObject(isInternal, file, taskId, path) {
   if (isInternal) {
-    dataObj = {
+    return {
       filename: file.name,
       size: getHumanFileSize(file.size),
       progress: 0,
@@ -144,7 +144,7 @@ export function getDataObject(isInternal, file, taskId, path) {
       taskId
     }
   } else {
-    dataObj = {
+    return {
       filename: file.name,
       size: getHumanFileSize(file.size),
       path,
