@@ -4,7 +4,8 @@ import {
   isFileTypeSupported,
   EventEmitter,
   getChunkSizeArray,
-  initiateChunkUpload
+  initiateChunkUpload,
+   getDataObject
 } from './util.js';
 import Axios from 'axios';
 import { messages, events, internalEvents } from './constants';
@@ -92,37 +93,27 @@ export default class FlowManager extends EventEmitter {
         start = end;
         return fileEntry;
       });
-      this.emit(events.FILE_UPLOAD_INITIATED, {
-        filename: file.name,
-        path: targetFolder.id,
-        taskId: tempIds[0],
-        data: file._data
-      });
-      this.emitUploader(internalEvents.UPLOAD_INITIATED, {
-        filename: file.name,
-        size: file.size,
-        progress: 0,
-        isComplete: false,
-        isError: false,
-        taskId: tempIds[0],
-      });
+
+      this.emit(events.FILE_UPLOAD_INITIATED,
+        getDataObject(false, file, tempIds[0], targetFolder.id));
+      this.emitUploader(internalEvents.UPLOAD_INITIATED,
+        getDataObject(true, file, tempIds[0]));
       chunkCount = chunksToBeUploaded.length;
     } else {
       whiteListedFileEntries.map((file, index) => {
-        this.emit(events.FILE_UPLOAD_INITIATED, {
-          filename: file.name,
-          path: targetFolder.id,
-          taskId: tempIds[index],
-          data: file._data
+        if (file.size) {
+          this.emit(events.FILE_UPLOAD_INITIATED,
+            getDataObject(false, file, tempIds[index], targetFolder.id));
+          this.emitUploader(internalEvents.UPLOAD_INITIATED,
+            getDataObject(true, file, tempIds[index]));
+        } else {
+          file.file((fl) => {
+          this.emit(events.FILE_UPLOAD_INITIATED,
+            getDataObject(false, {...file, ...fl}, tempIds[index], targetFolder.id));
+          this.emitUploader(internalEvents.UPLOAD_INITIATED,
+            getDataObject(true, {...file, ...fl}, tempIds[index]));
         });
-        this.emitUploader(internalEvents.UPLOAD_INITIATED, {
-          filename: file.name,
-          size: file.size,
-          progress: 0,
-          isComplete: false,
-          isError: false,
-          taskId: tempIds[index]
-        });
+      }
       });
     }
     const detailsObj = {};
