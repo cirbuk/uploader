@@ -133,6 +133,27 @@ export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount,
   return chunkTempIds;
 }
 
+export function getDataObject(isInternal, file, taskId, path) {
+  if (isInternal) {
+    dataObj = {
+      filename: file.name,
+      size: getHumanFileSize(file.size),
+      progress: 0,
+      isComplete: false,
+      isError: false,
+      taskId
+    }
+  }  else {
+    dataObj = {
+      filename: file.name,
+      size: getHumanFileSize(file.size),
+      path,
+      taskId,
+      data: file._data
+    }
+  }
+}
+
 export const getHumanFileSize = (fileSizeInBytes) => {
   if (fileSizeInBytes) {
     let size = fileSizeInBytes;

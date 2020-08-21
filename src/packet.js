@@ -16,7 +16,6 @@ function getAllFileEntries(dataTransferItemList) {
     while (queue.length > 0) {
       let entry = queue.shift();
       if (entry.isFile) {
-        entry.file((fl) => console.log(fl));
         fileEntries.push(entry);
       } else if (entry.isDirectory) {
         directoryEntries.push(entry);
