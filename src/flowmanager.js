@@ -5,7 +5,7 @@ import {
   EventEmitter,
   getChunkSizeArray,
   initiateChunkUpload,
-   getDataObject
+  getDataObject
 } from './util.js';
 import Axios from 'axios';
 import { messages, events, internalEvents } from './constants';
@@ -108,12 +108,12 @@ export default class FlowManager extends EventEmitter {
             getDataObject(true, file, tempIds[index]));
         } else {
           file.file((fl) => {
-          this.emit(events.FILE_UPLOAD_INITIATED,
-            getDataObject(false, {...file, ...fl}, tempIds[index], targetFolder.id));
-          this.emitUploader(internalEvents.UPLOAD_INITIATED,
-            getDataObject(true, {...file, ...fl}, tempIds[index]));
-        });
-      }
+            this.emit(events.FILE_UPLOAD_INITIATED,
+              getDataObject(false, { ...file, ...fl }, tempIds[index], targetFolder.id));
+            this.emitUploader(internalEvents.UPLOAD_INITIATED,
+              getDataObject(true, { ...file, ...fl }, tempIds[index]));
+          });
+        }
       });
     }
     const detailsObj = {};

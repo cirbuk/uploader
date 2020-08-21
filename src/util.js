@@ -143,7 +143,7 @@ export function getDataObject(isInternal, file, taskId, path) {
       isError: false,
       taskId
     }
-  }  else {
+  } else {
     dataObj = {
       filename: file.name,
       size: getHumanFileSize(file.size),
