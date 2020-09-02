@@ -11,15 +11,19 @@ const MAX_CHUNKSIZE = 104857600;
 export const events = uploaderEvents;
 
 const addFileSizes = files => {
-  const mappedFiles = files.map(file => {
-    if (file.size) {
-      return file['_parsedSize'] = getHumanFileSize(file.size)
-    } else {
-      file.file(fl => file['_parsedSize'] = getHumanFileSize(fl.size));
-      return file;
-    }
-  });
-  return mappedFiles;
+  return Promise.all(files.map(file => {
+    return new Promise(resolveFile => {
+      if (file.size) {
+        file['_parsedSize'] = getHumanFileSize(file.size);
+          resolveFile(file);
+      } else {
+        file.file(fl => {
+          file['_parsedSize'] = getHumanFileSize(fl.size)
+          resolveFile(file);
+        });
+      }
+    })
+  }))
 }
 
 const validateDataTransfer = (obj = {}) => {
