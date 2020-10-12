@@ -15,7 +15,7 @@ const addFileSizes = files => {
     return new Promise(resolveFile => {
       if (file.size) {
         file['_parsedSize'] = getHumanFileSize(file.size);
-          resolveFile(file);
+        resolveFile(file);
       } else {
         file.file(fl => {
           file['_parsedSize'] = getHumanFileSize(fl.size)
@@ -74,9 +74,9 @@ export class Uploader {
                   enable = false,
                   min = MIN_CHUNKSIZE,
                   max = MAX_CHUNKSIZE
-                },
+                } = {},
                 urls: { getUploadUrl, createFolder } = {}
-              }) {
+              } = {}) {
     if (!isValidString(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrl" is a mandatory config option.`);
     }

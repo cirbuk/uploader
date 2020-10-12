@@ -12,7 +12,7 @@ import { messages, events, internalEvents } from './constants';
 import { isValidString } from "@kubric/litedash";
 
 export default class FlowManager extends EventEmitter {
-  static init({ chunking, urls }) {
+  static init({ chunking = {}, urls = {} }) {
     FlowManager.chunkingConfig = chunking;
     FlowManager.apiUrls = urls;
   };
