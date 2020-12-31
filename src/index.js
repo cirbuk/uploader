@@ -100,11 +100,11 @@ export class Uploader {
   }
 
 
-  constructor({ targetFolderId = "/root", token } = {}) {
+  constructor({ targetFolderId = "/root", token, isPublic = false } = {}) {
     this.targetFolderId = targetFolderId;
     this.getQueuedTasksProgress = this.getQueuedTasksProgress.bind(this);
     this.getChunkTasksProgress = this.getChunkTasksProgress.bind(this);
-    this.manager = new FlowManager(token, this.getQueuedTasksProgress, this.getChunkTasksProgress);
+    this.manager = new FlowManager(token, isPublic, this.getQueuedTasksProgress, this.getChunkTasksProgress);
     this.manager.on("ALL_UPLOADER", this.setUploaderData.bind(this));
     this.manager.on("CHUNK_TASK", this.setChunkTaskData.bind(this));
     this.uploaderData = [];
