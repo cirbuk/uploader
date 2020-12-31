@@ -128,8 +128,7 @@ export default class FlowManager extends EventEmitter {
       dataObj['parallel_chunks'] = chunkCount;
     }
     const { getUploadUrl } = FlowManager.apiUrls;
-    console.log('UPLADDDDDDDDDDDDDDDDDDDD****************************************************************');
-    console.log(this.isPublic);
+
     return Axios.request({
         url: getUploadUrl,
         method: 'post',
