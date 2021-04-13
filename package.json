@@ -1,6 +1,6 @@
 {
   "name": "@kubric/asset-uploader",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Upload assets to the kubric asset system",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -39,11 +39,11 @@
     "safe-eval": "0.4.1"
   },
   "peerDependencies": {
-    "@kubric/litedash": "0.0.3",
-    "axios": "0.19.2"
+    "@kubric/utils": "^1.0.0",
+    "axios": "^0.20.0"
   },
   "dependencies": {
-    "@kubric/litedash": "0.0.3",
+    "@kubric/utils": "^1.0.0",
     "axios": "^0.20.0"
   }
 }

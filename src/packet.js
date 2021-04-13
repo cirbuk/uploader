@@ -1,4 +1,4 @@
-import { isFunction } from "@kubric/litedash";
+import { isFunction } from "@kubric/utils";
 
 function getAllFileEntries(dataTransferItemList) {
   let fileEntries = [];

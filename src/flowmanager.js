@@ -9,7 +9,7 @@ import {
 } from './util.js';
 import Axios from 'axios';
 import { messages, events, internalEvents } from './constants';
-import { isValidString } from "@kubric/litedash";
+import { isValidString } from "@kubric/utils";
 
 export default class FlowManager extends EventEmitter {
   static init({ chunking = {}, urls = {} }) {

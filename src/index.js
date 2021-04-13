@@ -1,6 +1,6 @@
 import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
-import { isValidString, isUndefined } from "@kubric/litedash";
+import { isValidString, isUndefined } from "@kubric/utils";
 import { events as uploaderEvents } from "./constants";
 import { uploadTaskReducer, chunkTaskReducer } from './reducer';
 import { getHumanFileSize, promiseSerial } from "./util";
