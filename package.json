@@ -1,6 +1,6 @@
 {
   "name": "@kubric/asset-uploader",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "Upload assets to the kubric asset system",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -36,14 +36,12 @@
     "math-expression-evaluator": "^1.2.17",
     "rollup": "2.23.0",
     "rollup-plugin-terser": "6.1.0",
-    "safe-eval": "0.4.1"
-  },
-  "peerDependencies": {
-    "@kubric/utils": "^1.0.0",
+    "safe-eval": "0.4.1",
+    "@kubric/utils": "^1.0.1",
     "axios": "^0.20.0"
   },
-  "dependencies": {
-    "@kubric/utils": "^1.0.0",
+  "peerDependencies": {
+    "@kubric/utils": "^1.0.1",
     "axios": "^0.20.0"
   }
 }
