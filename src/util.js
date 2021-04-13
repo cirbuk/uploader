@@ -35,8 +35,9 @@ export const isFileTypeSupported = (extension) => [
   '.svg',
   '.pdf',
   '.sketch',
-  '.csv'
-].includes('.' + extension);
+  '.csv',
+  '.txt',
+].includes('.' + extension.toLowerCase());
 
 export const getChunkSizeArray = (fileSize, chunkSize) => {
   const chunkNumber = 6;

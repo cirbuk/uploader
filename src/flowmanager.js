@@ -17,11 +17,12 @@ export default class FlowManager extends EventEmitter {
     FlowManager.apiUrls = urls;
   };
 
-  constructor(token, getQueuedTasksProgress, getChunkTasksProgress) {
+  constructor(token, isPublic, getQueuedTasksProgress, getChunkTasksProgress) {
     super();
     this.getQueuedTasksProgress = getQueuedTasksProgress;
     this.getChunkTasksProgress = getChunkTasksProgress;
     this.token = token;
+    this.isPublic = isPublic;
   }
 
   createFolderFlowForPacket(pack, targetFolderId, callback) {
@@ -127,6 +128,7 @@ export default class FlowManager extends EventEmitter {
       dataObj['parallel_chunks'] = chunkCount;
     }
     const { getUploadUrl } = FlowManager.apiUrls;
+
     return Axios.request({
         url: getUploadUrl,
         method: 'post',
@@ -135,6 +137,7 @@ export default class FlowManager extends EventEmitter {
           token: this.token,
           details: whiteListedFileEntries.map(file => {
             return {
+              public: this.isPublic,
               filename: file.name,
               ...detailsObj
             }
