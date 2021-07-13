@@ -100,7 +100,7 @@ export class Uploader {
   }
 
 
-  constructor({ targetFolderId = "/root", token, isPublic = false } = {}) {
+  constructor({ targetFolderId = "/root", token, isPublic = false, tags = [] } = {}) {
     this.targetFolderId = targetFolderId;
     this.getQueuedTasksProgress = this.getQueuedTasksProgress.bind(this);
     this.getChunkTasksProgress = this.getChunkTasksProgress.bind(this);
@@ -113,6 +113,7 @@ export class Uploader {
       clearedData: []
     }
     this.chunkTaskData = [];
+    this.tags = tags.join(',');
   }
 
   getChunkTasksProgress(taskId) {
@@ -152,7 +153,7 @@ export class Uploader {
   }
 
   onNewUploadPacket(uploadPacket) {
-    const { targetFolderId } = this;
+    const { targetFolderId, tags } = this;
     return promiseSerial(
       uploadPacket.map(pack => () => {
         const { folder } = pack;
@@ -162,7 +163,7 @@ export class Uploader {
             resolve({
               id: targetFolderId
             });
-            return this.manager.uploadFilesFlow({ id: targetFolderId }, pack.files);
+            return this.manager.uploadFilesFlow({ id: targetFolderId }, pack.files, tags);
           }
           let folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] || targetFolderId;
 
