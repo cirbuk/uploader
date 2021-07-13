@@ -70,7 +70,7 @@ export default class FlowManager extends EventEmitter {
       });
   };
 
-  uploadFilesFlow(targetFolder, files) {
+  uploadFilesFlow(targetFolder, files, tags) {
     const whiteListedFileEntries = files.filter(file => !file.name.startsWith('.'));
     const tempIds = whiteListedFileEntries.map(() => uuid());
     let chunkTempIds = [];
@@ -139,6 +139,7 @@ export default class FlowManager extends EventEmitter {
             return {
               public: this.isPublic,
               filename: file.name,
+              tags,
               ...detailsObj
             }
           })
