@@ -113,7 +113,7 @@ export class Uploader {
       clearedData: []
     }
     this.chunkTaskData = [];
-    this.tags = tags.join(',');
+    this.tags = tags;
   }
 
   getChunkTasksProgress(taskId) {
