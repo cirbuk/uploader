@@ -3,13 +3,13 @@ import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/utils";
 import { events as uploaderEvents } from "./constants";
 import { uploadTaskReducer, chunkTaskReducer } from './reducer';
-import {getFileEntries, getHumanFileSize, promiseSerial} from "./util";
+import {getFileEntries, getHumanFileSize, promiseSerial, uuid} from "./util";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
 
 export const events = uploaderEvents;
-export {getFileEntries, getUploadPacket};
+export {getFileEntries, getUploadPacket, uuid};
 
 const addFileSizes = files => {
   return Promise.all(files.map(file => {
