@@ -9,6 +9,7 @@ const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
 
 export const events = uploaderEvents;
+export {getFileEntries, getUploadPacket};
 
 const addFileSizes = files => {
   return Promise.all(files.map(file => {
