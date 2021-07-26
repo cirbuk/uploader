@@ -1,5 +1,5 @@
 // Utility to convert FileList into FileEntries
-export const getFileEntries = (files) => {
+export const getFileEntries = (files = []) => {
   const fileEntries = [];
 
   for (let i = 0; i < files.length; i++) {
