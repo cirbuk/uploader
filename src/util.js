@@ -2,7 +2,7 @@
 export const getFileEntries = (files = []) => {
   const fileEntries = [];
 
-  for (let i = 0; i < files.length; i++) {
+  for (let i = 0; i < files.length; i+=1) {
     const fileEntry = files[i];
     fileEntry.file = callback => {
       callback(fileEntry);
