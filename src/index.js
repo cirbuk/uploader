@@ -3,7 +3,7 @@ import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/utils";
 import { events as uploaderEvents } from "./constants";
 import { uploadTaskReducer, chunkTaskReducer } from './reducer';
-import { getHumanFileSize, promiseSerial } from "./util";
+import {getFileEntries, getHumanFileSize, promiseSerial} from "./util";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
@@ -209,15 +209,8 @@ export class Uploader {
       if (type === "dropped" && files.length > 0) {
         getUploadPacket(files, this.onNewUploadPacket.bind(this));
       } else {
-        const fileEntries = [];
-        //? Convert FileList into FileEntries
-        for (let i = 0; i < files.length; i++) {
-          const fileEntry = files[i];
-          fileEntry.file = callback => {
-            callback(fileEntry);
-          };
-          fileEntries.push(fileEntry);
-        }
+        // Convert FileList into FileEntries
+        const fileEntries = getFileEntries(files);
         const packet = [{
           folder: {
             uploadInTargetFolder: true,

@@ -1,3 +1,18 @@
+// Utility to convert FileList into FileEntries
+export const getFileEntries = (files) => {
+  const fileEntries = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const fileEntry = files[i];
+    fileEntry.file = callback => {
+      callback(fileEntry);
+    };
+    fileEntries.push(fileEntry);
+  }
+
+  return fileEntries;
+}
+
 export const uuid = () =>
   'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     let r = (Math.random() * 16) | 0, v = c == 'x' ? r : (r & 0x3) | 0x8;
