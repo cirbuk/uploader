@@ -153,6 +153,8 @@ export function getDataObject(isInternal, file, taskId, path, payload) {
   if (isInternal) {
     return {
       filename: file.name,
+      sizeInBytes: file.size,
+      lastModified: file.lastModified,
       size: getHumanFileSize(file.size),
       progress: 0,
       isComplete: false,
@@ -163,6 +165,8 @@ export function getDataObject(isInternal, file, taskId, path, payload) {
   } else {
     return {
       filename: file.name,
+      sizeInBytes: file.size,
+      lastModified: file.lastModified,
       size: getHumanFileSize(file.size),
       path,
       taskId,
