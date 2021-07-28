@@ -25,7 +25,7 @@ export default class FlowManager extends EventEmitter {
     this.isPublic = isPublic;
   }
 
-  createFolderFlowForPacket(pack, targetFolderId, callback) {
+  createFolderFlowForPacket(pack, targetFolderId, callback, payload) {
     const folderCreationUrl = FlowManager.apiUrls.createFolder;
     if (!isValidString(folderCreationUrl)) {
       throw new Error("No API provided for folder creation");
@@ -48,13 +48,14 @@ export default class FlowManager extends EventEmitter {
         const eventData = {
           createdFolder: { ...createdFolder.data, created_time: new Date() },
           parentFolderId: targetFolderId,
-          appendAt: 'start'
+          appendAt: 'start',
+          ...(payload && {payload}),
         };
         callback(null, eventData);
         FlowManager.folderIdForPathCache[folder.fullPath] = createdFolder.data.id;
         this.emit(events.FOLDER_CREATED, eventData);
         if (pack.files.length > 0) {
-          return this.uploadFilesFlow(createdFolder.data, pack.files);
+          return this.uploadFilesFlow(createdFolder.data, pack.files, undefined, payload);
         }
       })
       .catch(error => {
@@ -63,14 +64,15 @@ export default class FlowManager extends EventEmitter {
           for: {
             targetFolderId,
             pack
-          }
+          },
+          ...(payload && {payload}),
         }
         callback(eventData);
         this.emit(events.FOLDER_CREATE_FAILED, eventData);
       });
   };
 
-  uploadFilesFlow(targetFolder, files, tags) {
+  uploadFilesFlow(targetFolder, files, tags, payload) {
     const whiteListedFileEntries = files.filter(file => !file.name.startsWith('.'));
     const tempIds = whiteListedFileEntries.map(() => uuid());
     let chunkTempIds = [];
@@ -96,7 +98,7 @@ export default class FlowManager extends EventEmitter {
       });
 
       this.emit(events.FILE_UPLOAD_INITIATED,
-        getDataObject(false, file, tempIds[0], targetFolder.id));
+        getDataObject(false, file, tempIds[0], targetFolder.id, payload));
       this.emitUploader(internalEvents.UPLOAD_INITIATED,
         getDataObject(true, file, tempIds[0]));
       chunkCount = chunksToBeUploaded.length;
@@ -104,14 +106,14 @@ export default class FlowManager extends EventEmitter {
       whiteListedFileEntries.map((file, index) => {
         if (file.size) {
           this.emit(events.FILE_UPLOAD_INITIATED,
-            getDataObject(false, file, tempIds[index], targetFolder.id));
+            getDataObject(false, file, tempIds[index], targetFolder.id, payload));
           this.emitUploader(internalEvents.UPLOAD_INITIATED,
             getDataObject(true, file, tempIds[index]));
         } else {
           file._data ? fl._data = file._data : '';
           file.file((fl) => {
             this.emit(events.FILE_UPLOAD_INITIATED,
-              getDataObject(false, fl, tempIds[index], targetFolder.id));
+              getDataObject(false, fl, tempIds[index], targetFolder.id, payload));
             this.emitUploader(internalEvents.UPLOAD_INITIATED,
               getDataObject(true, fl, tempIds[index]));
           });
@@ -167,7 +169,8 @@ export default class FlowManager extends EventEmitter {
                 progress: this.getChunkTasksProgress(tempIds[0]),
                 taskId: tempIds[0],
                 data: file._data,
-                ...uploadUrlData
+                ...uploadUrlData,
+                ...(payload && {payload})
               });
               const extension = getExtension(file);
               if (url && isFileTypeSupported(extension)) {
@@ -192,10 +195,12 @@ export default class FlowManager extends EventEmitter {
                         progress: this.getChunkTasksProgress(tempIds[0]),
                         taskId: tempIds[0],
                         data: fileData,
-                        ...uploadUrlData
+                        ...uploadUrlData,
+                        ...(payload && {payload})
                       });
                       this.emit(events.TOTAL_PROGRESS, {
                         progress: this.getQueuedTasksProgress(),
+                        ...(payload && {payload})
                       });
                     }
                   })
@@ -212,7 +217,8 @@ export default class FlowManager extends EventEmitter {
                       });
                       this.emit(events.FILE_UPLOAD_COMPLETED, {
                         data: fileData,
-                        ...uploadUrlData
+                        ...uploadUrlData,
+                        ...(payload && {payload})
                       });
                     }
                   })
@@ -226,7 +232,8 @@ export default class FlowManager extends EventEmitter {
                       error,
                       taskId: tempIds[0],
                       data: fileData,
-                      ...uploadUrlData
+                      ...uploadUrlData,
+                      ...(payload && {payload})
                     });
                   });
               } else {
@@ -235,7 +242,8 @@ export default class FlowManager extends EventEmitter {
                   taskId: tempIds[0]
                 });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
-                  taskId: tempIds[0]
+                  taskId: tempIds[0],
+                  ...(payload && {payload})
                 });
               }
             });
@@ -253,7 +261,8 @@ export default class FlowManager extends EventEmitter {
                 data: file._data,
                 progress: 1,
                 taskId: tempTaskId,
-                ...uploadUrlData
+                ...uploadUrlData,
+                ...(payload && {payload})
               });
               const extension = getExtension(file);
               if (uploadUrlData && uploadUrlData.url && isFileTypeSupported(extension)) {
@@ -273,10 +282,12 @@ export default class FlowManager extends EventEmitter {
                         data: fileData,
                         progress: percent,
                         taskId: tempTaskId,
-                        ...uploadUrlData
+                        ...uploadUrlData,
+                        ...(payload && {payload})
                       });
                       this.emit(events.TOTAL_PROGRESS, {
                         progress: this.getQueuedTasksProgress(),
+                        ...(payload && {payload})
                       });
                     }
                   })
@@ -288,7 +299,8 @@ export default class FlowManager extends EventEmitter {
                     this.emit(events.FILE_UPLOAD_COMPLETED, {
                       data: fileData,
                       taskId: tempTaskId,
-                      ...uploadUrlData
+                      ...uploadUrlData,
+                      ...(payload && {payload})
                     });
                   })
                   .catch(error => {
@@ -300,7 +312,8 @@ export default class FlowManager extends EventEmitter {
                       data: fileData,
                       error,
                       taskId: tempTaskId,
-                      ...uploadUrlData
+                      ...uploadUrlData,
+                      ...(payload && {payload})
                     });
                   });
               } else {
@@ -309,7 +322,8 @@ export default class FlowManager extends EventEmitter {
                   taskId: tempTaskId
                 });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
-                  taskId: tempTaskId
+                  taskId: tempTaskId,
+                  ...(payload && {payload})
                 });
               }
             });

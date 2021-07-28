@@ -149,7 +149,7 @@ export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount,
   return chunkTempIds;
 }
 
-export function getDataObject(isInternal, file, taskId, path) {
+export function getDataObject(isInternal, file, taskId, path, payload) {
   if (isInternal) {
     return {
       filename: file.name,
@@ -157,7 +157,8 @@ export function getDataObject(isInternal, file, taskId, path) {
       progress: 0,
       isComplete: false,
       isError: false,
-      taskId
+      taskId,
+      ...(payload && {payload}),
     }
   } else {
     return {
@@ -165,7 +166,8 @@ export function getDataObject(isInternal, file, taskId, path) {
       size: getHumanFileSize(file.size),
       path,
       taskId,
-      data: file._data
+      data: file._data,
+      ...(payload && {payload}),
     }
   }
 }
