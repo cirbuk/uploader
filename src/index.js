@@ -153,7 +153,7 @@ export class Uploader {
     return this.manager.on(event, handler);
   }
 
-  onNewUploadPacket(uploadPacket) {
+  onNewUploadPacket(uploadPacket, payload) {
     const { targetFolderId, tags } = this;
     return promiseSerial(
       uploadPacket.map(pack => () => {
@@ -164,7 +164,7 @@ export class Uploader {
             resolve({
               id: targetFolderId
             });
-            return this.manager.uploadFilesFlow({ id: targetFolderId }, pack.files, tags);
+            return this.manager.uploadFilesFlow({ id: targetFolderId }, pack.files, tags, payload);
           }
           let folderIdForNewFolder = FlowManager.folderIdForPathCache[folder.onlyPath] || targetFolderId;
 
@@ -172,7 +172,7 @@ export class Uploader {
             if (eventData) {
               resolve(eventData.folderCreated);
             }
-          });
+          }, payload);
         });
       }));
   }
@@ -200,15 +200,18 @@ export class Uploader {
   // 1. Pass an event object directly from the HTML file input
   // 2. event.dataTransfer object where event is drop event object
   // 3. event.files object where event is the file changed event object in an HTML file input
-  upload(obj) {
+  // Any data object with a `payload` can be passed as 2nd argument, This payload will be attached to the fired event data
+  upload(obj, {payload} = {}) {
     if (!Uploader.initialized) {
       throw new Error("Uploader not initialized");
     }
+
     const results = parseInput(obj);
     if (results) {
       const { type, files = [] } = results;
+
       if (type === "dropped" && files.length > 0) {
-        getUploadPacket(files, this.onNewUploadPacket.bind(this));
+        getUploadPacket(files, this.onNewUploadPacket.bind(this), payload);
       } else {
         // Convert FileList into FileEntries
         const fileEntries = getFileEntries(files);
@@ -221,7 +224,8 @@ export class Uploader {
           },
           files: fileEntries
         }];
-        this.onNewUploadPacket(packet);
+
+        this.onNewUploadPacket(packet, payload);
       }
     }
   }

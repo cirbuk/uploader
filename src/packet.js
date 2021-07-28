@@ -90,10 +90,10 @@ function readEntriesPromise(directoryReader) {
   }
 }
 
-export const getUploadPacket = (items, callback) =>
+export const getUploadPacket = (items, callback, payload) =>
   getAllFileEntries(items)
     .then(response => {
-      isFunction(callback) && callback(response);
+      isFunction(callback) && callback(response, payload);
       return response;
     });
   
