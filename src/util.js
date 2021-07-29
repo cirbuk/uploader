@@ -149,29 +149,32 @@ export function initiateChunkUpload(chunkTempIds, tempIds, name, id, chunkCount,
   return chunkTempIds;
 }
 
+export function getFileMeta(file, payload) {
+  return {
+    filename: file.name,
+    sizeInBytes: file.size,
+    lastModified: file.lastModified,
+    ...(payload && {payload}),
+  }
+}
+
 export function getDataObject(isInternal, file, taskId, path, payload) {
   if (isInternal) {
     return {
-      filename: file.name,
-      sizeInBytes: file.size,
-      lastModified: file.lastModified,
       size: getHumanFileSize(file.size),
       progress: 0,
       isComplete: false,
       isError: false,
       taskId,
-      ...(payload && {payload}),
+      ...getFileMeta(file, payload)
     }
   } else {
     return {
-      filename: file.name,
-      sizeInBytes: file.size,
-      lastModified: file.lastModified,
       size: getHumanFileSize(file.size),
       path,
       taskId,
       data: file._data,
-      ...(payload && {payload}),
+      ...getFileMeta(file, payload)
     }
   }
 }
