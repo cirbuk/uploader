@@ -5,7 +5,8 @@ import {
   EventEmitter,
   getChunkSizeArray,
   initiateChunkUpload,
-  getDataObject
+  getDataObject,
+  getFileMeta
 } from './util.js';
 import Axios from 'axios';
 import { messages, events, internalEvents } from './constants';
@@ -170,7 +171,7 @@ export default class FlowManager extends EventEmitter {
                 taskId: tempIds[0],
                 data: file._data,
                 ...uploadUrlData,
-                ...(payload && {payload})
+                ...getFileMeta(file, payload)
               });
               const extension = getExtension(file);
               if (url && isFileTypeSupported(extension)) {
@@ -196,7 +197,7 @@ export default class FlowManager extends EventEmitter {
                         taskId: tempIds[0],
                         data: fileData,
                         ...uploadUrlData,
-                        ...(payload && {payload})
+                        ...getFileMeta(file, payload)
                       });
                       this.emit(events.TOTAL_PROGRESS, {
                         progress: this.getQueuedTasksProgress(),
@@ -218,7 +219,7 @@ export default class FlowManager extends EventEmitter {
                       this.emit(events.FILE_UPLOAD_COMPLETED, {
                         data: fileData,
                         ...uploadUrlData,
-                        ...(payload && {payload})
+                        ...getFileMeta(file, payload)
                       });
                     }
                   })
@@ -233,7 +234,7 @@ export default class FlowManager extends EventEmitter {
                       taskId: tempIds[0],
                       data: fileData,
                       ...uploadUrlData,
-                      ...(payload && {payload})
+                      ...getFileMeta(file, payload)
                     });
                   });
               } else {
@@ -243,7 +244,7 @@ export default class FlowManager extends EventEmitter {
                 });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
                   taskId: tempIds[0],
-                  ...(payload && {payload})
+                  ...getFileMeta(file, payload)
                 });
               }
             });
@@ -262,7 +263,7 @@ export default class FlowManager extends EventEmitter {
                 progress: 1,
                 taskId: tempTaskId,
                 ...uploadUrlData,
-                ...(payload && {payload})
+                ...getFileMeta(file, payload)
               });
               const extension = getExtension(file);
               if (uploadUrlData && uploadUrlData.url && isFileTypeSupported(extension)) {
@@ -283,7 +284,7 @@ export default class FlowManager extends EventEmitter {
                         progress: percent,
                         taskId: tempTaskId,
                         ...uploadUrlData,
-                        ...(payload && {payload})
+                        ...getFileMeta(file, payload)
                       });
                       this.emit(events.TOTAL_PROGRESS, {
                         progress: this.getQueuedTasksProgress(),
@@ -300,7 +301,7 @@ export default class FlowManager extends EventEmitter {
                       data: fileData,
                       taskId: tempTaskId,
                       ...uploadUrlData,
-                      ...(payload && {payload})
+                      ...getFileMeta(file, payload)
                     });
                   })
                   .catch(error => {
@@ -313,7 +314,7 @@ export default class FlowManager extends EventEmitter {
                       error,
                       taskId: tempTaskId,
                       ...uploadUrlData,
-                      ...(payload && {payload})
+                      ...getFileMeta(file, payload)
                     });
                   });
               } else {
@@ -323,7 +324,7 @@ export default class FlowManager extends EventEmitter {
                 });
                 this.emit(events.GET_FILE_UPLOAD_URL_FAILED, {
                   taskId: tempTaskId,
-                  ...(payload && {payload})
+                  ...getFileMeta(file, payload)
                 });
               }
             });
