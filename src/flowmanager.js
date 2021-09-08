@@ -80,7 +80,6 @@ export default class FlowManager extends EventEmitter {
     let chunksToBeUploaded = [];
     let chunkCount = 0;
     const { min: minSize, max: maxSize, enable: enableChunking } = FlowManager.chunkingConfig;
-
     if (enableChunking && files.length === 1 && files[0].size >= minSize && files[0].size <= maxSize) {
       const file = files[0];
       const chunkSize = 256 * 1024;
@@ -131,7 +130,6 @@ export default class FlowManager extends EventEmitter {
       dataObj['parallel_chunks'] = chunkCount;
     }
     const { getUploadUrl } = FlowManager.apiUrls;
-
     return Axios.request({
         url: getUploadUrl,
         method: 'post',
@@ -330,6 +328,16 @@ export default class FlowManager extends EventEmitter {
             });
           });
         }
+      })
+      .catch(error => {
+        this.emitUploader(internalEvents.UPLOAD_FAILED, {
+          isError: true
+        });
+        this.emit(events.FILE_UPLOAD_FAILED, {
+          error,
+          files,
+          ...(payload && {payload})
+        });
       });
   };
 }
