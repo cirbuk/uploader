@@ -28,7 +28,8 @@ export default [{
       plugins: [
         require("@babel/plugin-proposal-class-properties"),
         require("@babel/plugin-proposal-function-bind"),
-        require("@babel/plugin-proposal-object-rest-spread")
+        require("@babel/plugin-proposal-object-rest-spread"),
+        require("@babel/plugin-proposal-optional-chaining")
       ],
       extensions: ['.js', '.ts']
     }),

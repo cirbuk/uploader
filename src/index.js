@@ -29,7 +29,7 @@ const addFileSizes = files => {
 
 const validateDataTransfer = (obj = {}) => {
   if (obj.items instanceof DataTransferItemList) {
-    if (obj.items[0].webkitGetAsEntry().isFile && obj.items.length === 1) {
+    if (obj.items[0].webkitGetAsEntry()?.isFile && obj.items.length === 1) {
       return {
         type: "droppedFile",
         files: [obj.files[0]]

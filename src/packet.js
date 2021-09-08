@@ -15,9 +15,9 @@ function getAllFileEntries(dataTransferItemList) {
     const promises = [];
     while (queue.length > 0) {
       let entry = queue.shift();
-      if (entry.isFile) {
+      if (entry?.isFile) {
         fileEntries.push(entry);
-      } else if (entry.isDirectory) {
+      } else if (entry?.isDirectory) {
         directoryEntries.push(entry);
         promises.push(
           readAllDirectoryEntries(entry.createReader())
