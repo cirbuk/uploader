@@ -3,13 +3,13 @@ import FlowManager from './flowmanager';
 import { isValidString, isUndefined } from "@kubric/utils";
 import { events as uploaderEvents } from "./constants";
 import { uploadTaskReducer, chunkTaskReducer } from './reducer';
-import {getFileEntries, getHumanFileSize, promiseSerial, uuid} from "./util";
+import { getFileEntries, getHumanFileSize, promiseSerial, uuid, getFilesFromFileEntries } from "./util";
 
 const MIN_CHUNKSIZE = 52428800;
 const MAX_CHUNKSIZE = 104857600;
 
 export const events = uploaderEvents;
-export {getFileEntries, getUploadPacket, uuid};
+export { getFileEntries, getUploadPacket, uuid, getFilesFromFileEntries };
 
 const addFileSizes = files => {
   return Promise.all(files.map(file => {
@@ -200,8 +200,9 @@ export class Uploader {
   // 1. Pass an event object directly from the HTML file input
   // 2. event.dataTransfer object where event is drop event object
   // 3. event.files object where event is the file changed event object in an HTML file input
-  // Any data object with a `payload` can be passed as 2nd argument, This payload will be attached to the fired event data
-  upload(obj, {payload} = {}) {
+  // Any data object with a `payload` can be passed as 2nd argument, This payload will be attached to the fired event
+  // data
+  upload(obj, { payload } = {}) {
     if (!Uploader.initialized) {
       throw new Error("Uploader not initialized");
     }

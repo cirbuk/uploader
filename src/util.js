@@ -1,4 +1,6 @@
 // Utility to convert FileList into FileEntries
+import { isFunction } from "@kubric/utils";
+
 export const getFileEntries = (files = []) => {
   const fileEntries = [];
 
@@ -12,6 +14,22 @@ export const getFileEntries = (files = []) => {
 
   return fileEntries;
 }
+
+/**
+ * Extracts files from the file entries in the provided array and returns a promise that resolves with the list of
+ * files. If there are elements in the array that are not FileEntry, they are left as such
+ * @param fileEntries
+ * @return {Promise<Promise<File>[]>}
+ */
+export const getFilesFromFileEntries = (fileEntries = []) => {
+  const promises = fileEntries.map((fileEntry) => {
+    if (isFunction(fileEntry.file)) {
+      return new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+    }
+    return Promise.resolve(fileEntry);
+  });
+  return Promise.all(promises);
+};
 
 export const uuid = () =>
   'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
