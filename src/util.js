@@ -45,6 +45,7 @@ export const isFileTypeSupported = (extension) => [
   '.jpeg',
   '.jpe',
   '.jpg',
+  '.webp',
   '.eps',
   '.mkv',
   '.mov',
@@ -70,6 +71,7 @@ export const isFileTypeSupported = (extension) => [
   '.sketch',
   '.csv',
   '.txt',
+  '.xlsx'
 ].includes('.' + extension.toLowerCase());
 
 export const getChunkSizeArray = (fileSize, chunkSize) => {
