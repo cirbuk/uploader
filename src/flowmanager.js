@@ -9,11 +9,11 @@ import {
   getFileMeta
 } from './util.js';
 import Axios from 'axios';
-import { messages, events, internalEvents } from './constants';
-import { isValidString } from "@kubric/utils";
+import {messages, events, internalEvents} from './constants';
+import {isFunction, isValidString} from "@kubric/utils";
 
 export default class FlowManager extends EventEmitter {
-  static init({ chunking = {}, urls = {} }) {
+  static init({chunking = {}, urls = {}}) {
     FlowManager.chunkingConfig = chunking;
     FlowManager.apiUrls = urls;
   };
@@ -27,13 +27,12 @@ export default class FlowManager extends EventEmitter {
   }
 
   createFolderFlowForPacket(pack, targetFolderId, callback, payload) {
-    const folderCreationUrl = FlowManager.apiUrls.createFolder;
-    if (!isValidString(folderCreationUrl)) {
-      throw new Error("No API provided for folder creation");
-    }
-    const { folder } = pack;
-    return Axios.request({
-        url: folderCreationUrl,
+    const {createFolder} = FlowManager.apiUrls
+    const folderCreationUrlPromise = isFunction(createFolder) ? createFolder() : Promise.resolve(createFolder);
+    const {folder} = pack;
+    return folderCreationUrlPromise
+      .then((apiUrl) => Axios.request({
+        url: apiUrl,
         method: 'post',
         data: {
           data: {
@@ -44,10 +43,10 @@ export default class FlowManager extends EventEmitter {
           },
           token: this.token
         }
-      })
+      }))
       .then(createdFolder => {
         const eventData = {
-          createdFolder: { ...createdFolder.data, created_time: new Date() },
+          createdFolder: {...createdFolder.data, created_time: new Date()},
           parentFolderId: targetFolderId,
           appendAt: 'start',
           ...(payload && {payload}),
@@ -79,7 +78,7 @@ export default class FlowManager extends EventEmitter {
     let chunkTempIds = [];
     let chunksToBeUploaded = [];
     let chunkCount = 0;
-    const { min: minSize, max: maxSize, enable: enableChunking } = FlowManager.chunkingConfig;
+    const {min: minSize, max: maxSize, enable: enableChunking} = FlowManager.chunkingConfig;
     if (enableChunking && files.length === 1 && files[0].size >= minSize && files[0].size <= maxSize) {
       const file = files[0];
       const chunkSize = 256 * 1024;
@@ -88,7 +87,7 @@ export default class FlowManager extends EventEmitter {
       chunksToBeUploaded = chunkArr.map((val, index) => {
         const end = ((start + val) > file.size) ? file.size : (start + val);
         const chunk = file.slice(start, end)
-        const fileEntry = new File([chunk], index + file.name, { type: 'text/plain' });
+        const fileEntry = new File([chunk], index + file.name, {type: 'text/plain'});
         fileEntry.file = callback => {
           callback(fileEntry);
         };
@@ -129,26 +128,30 @@ export default class FlowManager extends EventEmitter {
     if (chunkCount > 1) {
       dataObj['parallel_chunks'] = chunkCount;
     }
-    const { getUploadUrl } = FlowManager.apiUrls;
-    return Axios.request({
-        url: getUploadUrl,
-        method: 'post',
-        data: {
-          ...dataObj,
-          token: this.token,
-          details: whiteListedFileEntries.map(file => {
-            return {
-              public: this.isPublic,
-              filename: file.name,
-              tags,
-              ...detailsObj
-            }
-          })
-        }
-      })
+    const {getUploadUrl} = FlowManager.apiUrls;
+    let getUploadUrlPromise = isFunction(getUploadUrl) ? getUploadUrl() : Promise.resolve(getUploadUrl)
+    return getUploadUrlPromise
+      .then((apiUrl) =>
+        Axios.request({
+          url: apiUrl,
+          method: 'post',
+          data: {
+            ...dataObj,
+            token: this.token,
+            details: whiteListedFileEntries.map(file => {
+              return {
+                public: this.isPublic,
+                filename: file.name,
+                tags,
+                ...detailsObj
+              }
+            })
+          }
+        })
+      )
       .then(response => {
         if (chunkCount > 1) {
-          const { urls, ...uploadUrlData } = response.data[0];
+          const {urls, ...uploadUrlData} = response.data[0];
           Object.keys(urls)
             .map((key, index) => {
               const url = urls[key];
@@ -175,34 +178,34 @@ export default class FlowManager extends EventEmitter {
               if (url && isFileTypeSupported(extension)) {
                 const fileData = file._data;
                 return Axios.request({
-                    method: 'post',
-                    url,
-                    data: file,
-                    onUploadProgress: (progressData) => {
-                      const { loaded, total } = progressData;
-                      const percent = Math.round((loaded / total) * 100);
-                      this.emitChunk(internalEvents.CHUNK_UPLOAD_PROGRESS, {
-                        progress: percent,
-                        chunkTaskId: tempTaskId,
-                        taskId: tempIds[0]
-                      });
-                      this.emitUploader(internalEvents.UPLOAD_PROGRESS, {
-                        progress: this.getChunkTasksProgress(tempIds[0]),
-                        taskId: tempIds[0]
-                      });
-                      this.emit(events.FILE_UPLOAD_PROGRESS, {
-                        progress: this.getChunkTasksProgress(tempIds[0]),
-                        taskId: tempIds[0],
-                        data: fileData,
-                        ...uploadUrlData,
-                        ...getFileMeta(file, payload)
-                      });
-                      this.emit(events.TOTAL_PROGRESS, {
-                        progress: this.getQueuedTasksProgress(),
-                        ...(payload && {payload})
-                      });
-                    }
-                  })
+                  method: 'post',
+                  url,
+                  data: file,
+                  onUploadProgress: (progressData) => {
+                    const {loaded, total} = progressData;
+                    const percent = Math.round((loaded / total) * 100);
+                    this.emitChunk(internalEvents.CHUNK_UPLOAD_PROGRESS, {
+                      progress: percent,
+                      chunkTaskId: tempTaskId,
+                      taskId: tempIds[0]
+                    });
+                    this.emitUploader(internalEvents.UPLOAD_PROGRESS, {
+                      progress: this.getChunkTasksProgress(tempIds[0]),
+                      taskId: tempIds[0]
+                    });
+                    this.emit(events.FILE_UPLOAD_PROGRESS, {
+                      progress: this.getChunkTasksProgress(tempIds[0]),
+                      taskId: tempIds[0],
+                      data: fileData,
+                      ...uploadUrlData,
+                      ...getFileMeta(file, payload)
+                    });
+                    this.emit(events.TOTAL_PROGRESS, {
+                      progress: this.getQueuedTasksProgress(),
+                      ...(payload && {payload})
+                    });
+                  }
+                })
                   .then(e => {
                     this.emitChunk(internalEvents.CHUNK_UPLOAD_COMPLETED, {
                       taskId: tempIds[0],
@@ -267,29 +270,29 @@ export default class FlowManager extends EventEmitter {
               if (uploadUrlData && uploadUrlData.url && isFileTypeSupported(extension)) {
                 const fileData = file._data;
                 return Axios.request({
-                    method: 'post',
-                    url: uploadUrlData.url,
-                    data: file,
-                    onUploadProgress: (progressData) => {
-                      const { loaded, total } = progressData;
-                      const percent = Math.round((loaded / total) * 100)
-                      this.emitUploader(internalEvents.UPLOAD_PROGRESS, {
-                        progress: percent,
-                        taskId: tempTaskId
-                      });
-                      percent > 0 && this.emit(events.FILE_UPLOAD_PROGRESS, {
-                        data: fileData,
-                        progress: percent,
-                        taskId: tempTaskId,
-                        ...uploadUrlData,
-                        ...getFileMeta(file, payload)
-                      });
-                      this.emit(events.TOTAL_PROGRESS, {
-                        progress: this.getQueuedTasksProgress(),
-                        ...(payload && {payload})
-                      });
-                    }
-                  })
+                  method: 'post',
+                  url: uploadUrlData.url,
+                  data: file,
+                  onUploadProgress: (progressData) => {
+                    const {loaded, total} = progressData;
+                    const percent = Math.round((loaded / total) * 100)
+                    this.emitUploader(internalEvents.UPLOAD_PROGRESS, {
+                      progress: percent,
+                      taskId: tempTaskId
+                    });
+                    percent > 0 && this.emit(events.FILE_UPLOAD_PROGRESS, {
+                      data: fileData,
+                      progress: percent,
+                      taskId: tempTaskId,
+                      ...uploadUrlData,
+                      ...getFileMeta(file, payload)
+                    });
+                    this.emit(events.TOTAL_PROGRESS, {
+                      progress: this.getQueuedTasksProgress(),
+                      ...(payload && {payload})
+                    });
+                  }
+                })
                   .then(() => {
                     this.emitUploader(internalEvents.UPLOAD_COMPLETED, {
                       isComplete: true,

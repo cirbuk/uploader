@@ -1,6 +1,6 @@
 import { getUploadPacket } from './packet';
 import FlowManager from './flowmanager';
-import { isValidString, isUndefined } from "@kubric/utils";
+import {isValidString, isUndefined, isFunction} from "@kubric/utils";
 import { events as uploaderEvents } from "./constants";
 import { uploadTaskReducer, chunkTaskReducer } from './reducer';
 import { getFileEntries, getHumanFileSize, promiseSerial, uuid, getFilesFromFileEntries } from "./util";
@@ -78,7 +78,7 @@ export class Uploader {
                 } = {},
                 urls: { getUploadUrl, createFolder } = {}
               } = {}) {
-    if (!isValidString(getUploadUrl)) {
+    if (!isValidString(getUploadUrl) && !isFunction(getUploadUrl)) {
       throw new Error(`"urls.getUploadUrl" is a mandatory config option.`);
     }
     FlowManager.init({
