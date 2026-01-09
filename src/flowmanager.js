@@ -10,7 +10,7 @@ import {
 } from './util.js';
 import Axios from 'axios';
 import {messages, events, internalEvents} from './constants';
-import {isFunction, isValidString} from "@kubric/utils";
+import {isFunction} from "@kubric/utils";
 
 export default class FlowManager extends EventEmitter {
   static init({chunking = {}, urls = {}}) {
@@ -31,10 +31,12 @@ export default class FlowManager extends EventEmitter {
     const folderCreationUrlPromise = isFunction(createFolder) ? createFolder() : Promise.resolve(createFolder);
     const {folder} = pack;
     return folderCreationUrlPromise
-      .then((apiUrl) => Axios.request({
-        url: apiUrl,
-        method: 'post',
-        data: {
+      .then((apiUrl) => fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           data: {
             name: folder.name,
             path: targetFolderId,
@@ -42,8 +44,14 @@ export default class FlowManager extends EventEmitter {
             url: 'None',
           },
           token: this.token
-        }
+        })
       }))
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(createdFolder => {
         const eventData = {
           createdFolder: {...createdFolder.data, created_time: new Date()},
@@ -132,10 +140,12 @@ export default class FlowManager extends EventEmitter {
     let getUploadUrlPromise = isFunction(getUploadUrl) ? getUploadUrl() : Promise.resolve(getUploadUrl)
     return getUploadUrlPromise
       .then((apiUrl) =>
-        Axios.request({
-          url: apiUrl,
-          method: 'post',
-          data: {
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
             ...dataObj,
             token: this.token,
             details: whiteListedFileEntries.map(file => {
@@ -146,12 +156,18 @@ export default class FlowManager extends EventEmitter {
                 ...detailsObj
               }
             })
-          }
+          })
         })
       )
       .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(response => {
         if (chunkCount > 1) {
-          const {urls, ...uploadUrlData} = response.data[0];
+          const {urls, ...uploadUrlData} = response[0];
           Object.keys(urls)
             .map((key, index) => {
               const url = urls[key];
@@ -250,7 +266,7 @@ export default class FlowManager extends EventEmitter {
               }
             });
         } else {
-          response.data.map((uploadUrlData, index) => {
+          response.map((uploadUrlData, index) => {
             const fileEntry = whiteListedFileEntries[index];
             fileEntry.file(file => {
               const tempTaskId = tempIds[index];
